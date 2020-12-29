@@ -102,3 +102,9 @@ dist
 
 # TernJS port file
 .tern-port
+
+# ReasonML
+**/lib/
+.bsb.lock
+.merlin
+*.bs.js
