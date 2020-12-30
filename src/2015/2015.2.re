@@ -1,6 +1,7 @@
 let sample = "2x3x4
 1x1x10"
 
+/*
 type dimension = {
     l: option(int),
     w: option(int),
@@ -14,3 +15,4 @@ let dimensions = Belt.Array.forEach(dimensionStrs, (dimensionStr) => {l: Belt.In
 let size = Array.fold_left(
     ()
 );
+*/
