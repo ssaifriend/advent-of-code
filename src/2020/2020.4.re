@@ -72,6 +72,14 @@ module Passport = {
   };
 };
 
+module PassportValidator = {
+  let isValid = (passport: Passport.t, validators) => {
+    validators->Belt.List.reduce(true, (isValid, func) =>
+      isValid && func(passport)->Belt.Result.isOk
+    )
+  };
+}
+
 let passports = Js.String.split("\n\n", data)->Belt.Array.map(Passport.make);
 
 // part1
@@ -94,9 +102,7 @@ let validFunctions = [
 let validPassportCount =
   passports
   ->Belt.Array.map(passport => {
-      validFunctions->Belt.List.reduce(true, (isValid, func) =>
-        isValid && func(passport)->Belt.Result.isOk
-      )
+      passport->PassportValidator.isValid(validFunctions)
     })
   ->Belt.Array.keep(isValid => isValid)
   ->Belt.Array.length;
@@ -178,9 +184,7 @@ let validFunctions2 = [
 let validPassportCount2 =
   passports
   ->Belt.Array.map(passport => {
-      validFunctions2->Belt.List.reduce(true, (isValid, func) =>
-        isValid && func(passport)->Belt.Result.isOk
-      )
+      passport->PassportValidator.isValid(validFunctions2)
     })
   ->Belt.Array.keep(isValid => isValid)
   ->Belt.Array.length;
