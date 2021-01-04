@@ -9,12 +9,12 @@ let boardings =
   data
   ->Js.String2.split("\n")
   ->Belt.Array.map(row => {
+      let spliter = (row, ~from, ~to_) =>
+        row->Js.String2.substring(~from, ~to_)->Js.String2.split("");
       {
-        rows:
-          row->Js.String2.substring(~from=0, ~to_=7)->Js.String2.split(""),
-        cols:
-          row->Js.String2.substring(~from=7, ~to_=10)->Js.String2.split(""),
-      }
+        rows: row->spliter(~from=0, ~to_=7),
+        cols: row->spliter(~from=7, ~to_=10),
+      };
     });
 
 // part1
@@ -27,7 +27,7 @@ type result = {
   col: int,
 };
 
-let binaryRange = (b, isUpper) => {
+let binaryRange = (b, ~isUpper) => {
   let range = (b.high + 1 - b.low) / 2;
   if (isUpper) {
     {low: b.low + range, high: b.high};
@@ -40,19 +40,20 @@ let binaryRange = (b, isUpper) => {
 let seatIds =
   boardings
   ->Belt.Array.map(boarding => {
+      let reducer = (rows, boundary, ~upperComp) =>
+        rows->Belt.Array.reduce(boundary, (b, c) =>
+          b->binaryRange(~isUpper=c->upperComp)
+        );
+      let getLow = boundary => boundary.low;
       let seat = {
         row:
           boarding.rows
-          ->Belt.Array.reduce({low: 0, high: 127}, (b, c) =>
-              b->binaryRange(c == "B")
-            ).
-            low,
+          ->reducer({low: 0, high: 127}, ~upperComp=c => c == "B")
+          ->getLow,
         col:
           boarding.cols
-          ->Belt.Array.reduce({low: 0, high: 7}, (b, c) =>
-              b->binaryRange(c == "R")
-            ).
-            low,
+          ->reducer({low: 0, high: 7}, ~upperComp=c => c == "R")
+          ->getLow,
       };
 
       seat.row * 8 + seat.col;
@@ -62,18 +63,15 @@ let seatIds =
 Js.log(seatIds->Belt.Set.Int.maximum);
 
 // part2
-let minSeatId = seatIds->Belt.Set.Int.minimum->Belt.Option.getExn;
 let seatLength = seatIds->Belt.Set.Int.size;
 let seatIdArray = seatIds->Belt.Set.Int.toArray;
-let seatId =
-  seatIdArray->Belt.Array.reduceWithIndex(
-    minSeatId, (seatId, currentSeatId, index) => {
-    switch (index) {
-    | 0 => seatId
-    | _ when index + 1 != seatLength =>
-      seatIdArray[index + 1] != currentSeatId + 1 ? currentSeatId + 1 : seatId
-    | _ => seatId
-    }
-  });
+let rec findSeatId = (seatIds, currentSeatId, index) =>
+  switch (index) {
+  | _ when index + 1 == seatLength => currentSeatId
+  | _ when seatIds[index] + 1 != seatIds[index + 1] =>
+    seatIds->findSeatId(seatIds[index] + 1, index + 1)
+  | _ => seatIds->findSeatId(currentSeatId, index + 1)
+  };
+let seatId = seatIdArray->findSeatId(seatIdArray[0], 0);
 
 Js.log(seatId);
