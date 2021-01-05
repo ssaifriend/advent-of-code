@@ -55,16 +55,17 @@ let findContinueNumberSet = (numbers, ~findNumber, ~maxSetCount) => {
   ->Belt.Array.reduce(
       None,
       (beforeResult, startAt) => {
-        let set =
-          numbers->Belt.Array.slice(~offset=startAt, ~len=maxSetCount);
-        let continueSum =
-          set->Belt.Array.reduce(0.0, (sum, number) => sum +. number);
+        switch (beforeResult) {
+          | Some(a) => Some(a)
+          | None => {
+            let set =
+              numbers->Belt.Array.slice(~offset=startAt, ~len=maxSetCount);
+            let continueSum =
+              set->Belt.Array.reduce(0.0, (sum, number) => sum +. number);
 
-        switch (beforeResult, continueSum == findNumber) {
-        | (Some(a), _) => Some(a)
-        | (None, true) => Some(set)
-        | (_, false) => None
-        };
+            continueSum == findNumber ? Some(set) : None
+          }
+        }
       },
     );
 };
