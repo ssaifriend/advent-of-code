@@ -62,67 +62,44 @@ module Bag = {
 let bags = data->Js.String2.split("\n")->Belt.Array.map(Bag.make);
 
 // part1
-let rec findContainBags = (bag: Bag.t, allBags, findBagName) => {
-  // Js.log(bag.name);
-  switch (bag.name) {
-  | _ when bag.name == findBagName => Some(bag)
-  | _ when bag.contains->Belt.List.size > 0 =>
-    bag.contains
-    ->Belt.List.reduce(None, (findBag, containBag) => {
-        switch (findBag) {
-        | None =>
-          switch (
-            allBags->Belt.Array.getBy((b: Bag.t) => b.name == containBag.name)
-          ) {
-          | Some(b) => b->findContainBags(allBags, findBagName)
-          | None => None
-          }
-        | Some(a) => Some(a)
-        }
-      })
-  | _ => None
-  };
+let rec findContainBags = (contains, allBags, findBagName) => {
+  contains->Belt.List.reduce(false, (exists, containBag: Bag.t) => {
+    exists
+    || containBag.name == findBagName
+    || (
+      switch (
+        allBags->Belt.Array.getBy((bag: Bag.t) => bag.name == containBag.name)
+      ) {
+      | Some(containBags) =>
+        containBags.contains->findContainBags(allBags, findBagName)
+      | None => false
+      }
+    )
+  });
 };
 
 let findBagName = "shiny gold";
 let matchBagCount =
   bags
-  ->Belt.Array.map(bag => {
-      let filteredBag = {...bag, name: ""};
-      switch (filteredBag->findContainBags(bags, findBagName)) {
-      | Some(_) => 1
-      | None => 0
-      };
-    })
-  ->Belt.Array.reduce(0, (sum, count) => sum + count);
+  ->Belt.Array.map(bag => bag.contains->findContainBags(bags, findBagName))
+  ->Belt.Array.keep(x => x)
+  ->Belt.Array.size;
 
 Js.log(matchBagCount);
 
 // part2
 // let findBagName = "shiny gold"; // part1 에서 정의
-let rec summerizer = (bag: Bag.t, allBags) => {
-  switch (allBags->Belt.Array.getBy((b: Bag.t) => b.name == bag.name)) {
-  | Some(findBag) when findBag.contains->Belt.List.size > 0 =>
-    let containBagCount =
-      findBag.contains
-      ->Belt.List.reduce(0, (sum, containBag) =>
-          sum + containBag->summerizer(allBags)
-        );
-
-    (containBagCount + 1) * bag.count
-  | Some(_) => bag.count
+let rec summerizer = (allBags, bagName) => {
+  switch (allBags->Belt.Array.getBy((b: Bag.t) => b.name == bagName)) {
+  | Some(findBag) =>
+    findBag.contains
+    ->Belt.List.reduce(1, (sum, containBag) =>
+        sum + allBags->summerizer(containBag.name) * containBag.count
+      )
   | None => 0
   };
 };
 
-let allBagCount =
-  switch (bags->Belt.Array.getBy(b => b.name == findBagName)) {
-  | Some(a) =>
-    a.contains
-    ->Belt.List.reduce(0, (sum, containBag) =>
-        sum + containBag->summerizer(bags)
-      );
-  | None => 0
-  };
+let allBagCount = bags->summerizer(findBagName) - 1; // 자기 자신이 포함되어 있기에 빼야 함
 
 Js.log(allBagCount);
