@@ -40,7 +40,7 @@ let findNotMatchingNumber = (numbers, ~preamble) => {
         ) {
         | (Some(a), _) => Some(a)
         | (None, None) => Some(findNumber)
-        | (_, Some(b)) => None
+        | (_, Some(_)) => None
         };
       },
     );
