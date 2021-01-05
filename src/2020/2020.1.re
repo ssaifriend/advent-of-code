@@ -11,10 +11,12 @@ let rec findCurrentYearSet = (years, findYear, set, ~setCount) =>
     let yearSum = set->Belt.List.reduce(0, (sum, year) => sum + year);
     yearSum == findYear ? Some(set) : None;
   } else {
-    years->Belt.Array.reduce(None, (beforeResult, year) => {
+    years->Belt.Array.reduceWithIndex(None, (beforeResult, year, index) => {
       switch (
         beforeResult,
-        years->findCurrentYearSet(findYear, [year, ...set], ~setCount),
+        years
+        ->Belt.Array.keepWithIndex((_, filterIndex) => index != filterIndex)
+        ->findCurrentYearSet(findYear, [year, ...set], ~setCount),
       ) {
       | (Some(a), _) => Some(a)
       | (None, Some(a)) => Some(a)
