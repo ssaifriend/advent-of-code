@@ -17,17 +17,18 @@ exception InvalidJolts;
 
 let maxJolts = jolts->Belt.Set.Int.maximum->Belt.Option.getExn;
 
-let initialResult = {j1: 0, j2: 0, j3: 0, beforeJolts:0};
-let result = jolts
-->Belt.Set.Int.add(maxJolts + 3) // 마지막에 항상 +3?..
-->Belt.Set.Int.reduce(initialResult, (result, jolt) => {
-  switch (jolt - result.beforeJolts) {
-    | 1 => {...result, j1: result.j1 + 1, beforeJolts: jolt}
-    | 2 => {...result, j2: result.j2 + 1, beforeJolts: jolt}
-    | 3 => {...result, j3: result.j3 + 1, beforeJolts: jolt}
-    | _ => raise(InvalidJolts)
-  }
-});
+let initialResult = {j1: 0, j2: 0, j3: 0, beforeJolts: 0};
+let result =
+  jolts
+  ->Belt.Set.Int.add(maxJolts + 3) // 마지막에 항상 +3?..
+  ->Belt.Set.Int.reduce(initialResult, (result, jolt) => {
+      switch (jolt - result.beforeJolts) {
+      | 1 => {...result, j1: result.j1 + 1, beforeJolts: jolt}
+      | 2 => {...result, j2: result.j2 + 1, beforeJolts: jolt}
+      | 3 => {...result, j3: result.j3 + 1, beforeJolts: jolt}
+      | _ => raise(InvalidJolts)
+      }
+    });
 
 Js.log(result);
 Js.log(result.j1 * result.j3);
