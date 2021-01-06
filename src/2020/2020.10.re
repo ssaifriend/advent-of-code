@@ -32,3 +32,12 @@ let result =
 
 Js.log(result);
 Js.log(result.j1 * result.j3);
+
+
+// part2
+let fullJolts = 
+  jolts
+  ->Belt.Set.Int.add(0) // 시작은 0
+  ->Belt.Set.Int.add(maxJolts + 3) // 마지막에 항상 +3?..
+  ->Belt.Set.Int.toList;
+
