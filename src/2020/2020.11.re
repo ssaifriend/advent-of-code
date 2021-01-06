@@ -39,26 +39,28 @@ let makePositions = (r, c) => {
     {row: r + 1, col: c},
     {row: r + 1, col: c + 1},
   ];
-}
+};
 
 let occupiedCount = (seats, positions) => {
   positions
-    ->Belt.List.map(position => {
-        switch (seats->Belt.Array.get(position.row)) {
-        | Some(row) =>
-          switch (row->Belt.Array.get(position.col)) {
-          | Some(seat) => seat == Occupied
-          | _ => false
-          }
-        | None => false
+  ->Belt.List.map(position => {
+      switch (seats->Belt.Array.get(position.row)) {
+      | Some(row) =>
+        switch (row->Belt.Array.get(position.col)) {
+        | Some(seat) => seat == Occupied
+        | _ => false
         }
-      })
-    ->Belt.List.keep(x => x)
-    ->Belt.List.size;
-}
+      | None => false
+      }
+    })
+  ->Belt.List.keep(x => x)
+  ->Belt.List.size;
+};
 
-let emptyToNextState = (occupiedCount) => occupiedCount == 0 ? Occupied : Empty;
-let occupiedToNextState = (occupiedCount) => occupiedCount >= 4 ? Empty : Occupied;
+// module type 으로 변경해야함
+let emptyToNextState = occupiedCount => occupiedCount == 0 ? Occupied : Empty;
+let occupiedToNextState = occupiedCount =>
+  occupiedCount >= 4 ? Empty : Occupied;
 
 let stateChange = (seats, r, c, nextState) => {
   let positions = makePositions(r, c);
@@ -84,32 +86,28 @@ let rec compareCol = (beforeSeatCols, nextSeatCols, index): bool => {
   let result = compareSeat(beforeSeatCols[index], nextSeatCols[index]);
 
   if (!result) {
-    result
+    result;
+  } else if (beforeSeatCols->Belt.Array.size == index + 1) {
+    result;
   } else {
-    if (beforeSeatCols->Belt.Array.size == index + 1) {
-      result
-    } else {
-      compareCol(beforeSeatCols, nextSeatCols, index + 1)
-    }
-  }
-}
+    compareCol(beforeSeatCols, nextSeatCols, index + 1);
+  };
+};
 
 let rec compareRow = (beforeSeats, nextSeats, index): bool => {
   let result = compareCol(beforeSeats[index], nextSeats[index], 0);
 
   if (!result) {
-    result
+    result;
+  } else if (beforeSeats->Belt.Array.size == index + 1) {
+    result;
   } else {
-    if (beforeSeats->Belt.Array.size == index + 1) {
-      result
-    } else {
-      compareRow(beforeSeats, nextSeats, index + 1)
-    }
-  }
-}
+    compareRow(beforeSeats, nextSeats, index + 1);
+  };
+};
 
 let compare = (beforeSeats, nextSeats) => {
-  compareRow(beforeSeats, nextSeats, 0)
+  compareRow(beforeSeats, nextSeats, 0);
 };
 
 let rec findNoChangeState = seats => {
@@ -119,11 +117,10 @@ let rec findNoChangeState = seats => {
   compare(beforeSeats, nextSeats) ? nextSeats : nextSeats->findNoChangeState;
 };
 
-let noChangeSeats = seats->findNoChangeState
-let occupiedCount = 
-  noChangeSeats
-  ->Belt.Array.reduce(0, (sum, row) => {
-    sum + row->Belt.Array.keep((seat) => seat == Occupied)->Belt.Array.size
-  })
+let noChangeSeats = seats->findNoChangeState;
+let occupiedCount =
+  noChangeSeats->Belt.Array.reduce(0, (sum, row) => {
+    sum + row->Belt.Array.keep(seat => seat == Occupied)->Belt.Array.size
+  });
 
-Js.log(occupiedCount)
+Js.log(occupiedCount);
