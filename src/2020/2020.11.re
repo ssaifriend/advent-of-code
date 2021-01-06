@@ -1,125 +1,169 @@
 let data = Node.Fs.readFileSync("input/2020/2020.11.input", `utf8);
 let rows = data->Js.String2.split("\n");
 
-type seatState =
-  | Empty
-  | Occupied
-  | Floor;
+module Seat = {
+  type t =
+    | Empty
+    | Occupied
+    | Floor;
 
-exception InvalidState;
+  exception InvalidState;
 
-let seats =
+  let make = (inputStr) => 
+    switch (inputStr) {
+    | "L" => Empty
+    | "." => Floor
+    | _ => raise(InvalidState)
+    }
+};
+
+module Seats = {
+  type t = array(Seat.t);
+};
+
+module Coord = {
+  type t = {
+    row: int,
+    col: int,
+  };
+
+  let makeAroundCoords = (r, c) => {
+    [
+      {row: r - 1, col: c - 1},
+      {row: r - 1, col: c},
+      {row: r - 1, col: c + 1},
+      {row: r, col: c - 1},
+      // {row: r, col: c}, // 내 위치
+      {row: r, col: c + 1},
+      {row: r + 1, col: c - 1},
+      {row: r + 1, col: c},
+      {row: r + 1, col: c + 1},
+    ];
+  };
+};
+
+
+let seatsMap =
   rows->Belt.Array.map(row => {
     row
     ->Js.String2.split("")
-    ->Belt.Array.map(seat =>
-        switch (seat) {
-        | "L" => Empty
-        | "." => Floor
-        | _ => raise(InvalidState)
-        }
-      )
+    ->Belt.Array.map(Seat.make)
   });
 
+
 // part1
-type coord = {
-  row: int,
-  col: int,
-};
-
-let makePositions = (r, c) => {
-  [
-    {row: r - 1, col: c - 1},
-    {row: r - 1, col: c},
-    {row: r - 1, col: c + 1},
-    {row: r, col: c - 1},
-    // {row: r, col: c}, // 내 위치
-    {row: r, col: c + 1},
-    {row: r + 1, col: c - 1},
-    {row: r + 1, col: c},
-    {row: r + 1, col: c + 1},
-  ];
-};
-
-let occupiedCount = (seats, positions) => {
+let occupiedCount = (seatsMap, positions: list(Coord.t)) => {
   positions
   ->Belt.List.map(position => {
-      switch (seats->Belt.Array.get(position.row)) {
-      | Some(row) =>
-        switch (row->Belt.Array.get(position.col)) {
-        | Some(seat) => seat == Occupied
+      switch (seatsMap->Belt.Array.get(position.row)) {
+      | None => false
+      | Some(seats) =>
+        switch (seats->Belt.Array.get(position.col)) {
+        | Some(seat) => seat == Seat.Occupied
         | _ => false
         }
-      | None => false
       }
     })
   ->Belt.List.keep(x => x)
   ->Belt.List.size;
 };
 
-// module type 으로 변경해야함
-let emptyToNextState = occupiedCount => occupiedCount == 0 ? Occupied : Empty;
-let occupiedToNextState = occupiedCount =>
-  occupiedCount >= 4 ? Empty : Occupied;
+module type MakeNextState = {let next: int => Seat.t;};
 
-let stateChange = (seats, r, c, nextState) => {
-  let positions = makePositions(r, c);
-  let occupiedCount = seats->occupiedCount(positions);
+module NextState = (Item: MakeNextState) => {
+  let nextWithIndex = (seatsMap, r, c) => {
+    let positions = Coord.makeAroundCoords(r, c);
+    let occupiedCount = seatsMap->occupiedCount(positions);
 
-  nextState(occupiedCount);
+    Item.next(occupiedCount);
+  };
 };
 
-let nextState = seats => {
-  seats->Belt.Array.mapWithIndex((rIndex, rows) => {
-    rows->Belt.Array.mapWithIndex((cIndex, seat) => {
+module MakeEmptyNextState = {
+  open Seat;
+  let next = occupiedCount => occupiedCount == 0 ? Occupied : Empty;
+};
+module EmptyState = NextState(MakeEmptyNextState);
+
+module MakeOccupiedNextState = {
+  open Seat;
+  let next = occupiedCount => occupiedCount >= 4 ? Empty : Occupied;
+};
+module OccupiedState = NextState(MakeOccupiedNextState);
+
+let makeNextState = seatsMap => {
+  seatsMap->Belt.Array.mapWithIndex((rIndex, seats) => {
+    seats->Belt.Array.mapWithIndex((cIndex, seat) => {
       switch (seat) {
-      | Empty => seats->stateChange(rIndex, cIndex, emptyToNextState)
-      | Occupied => seats->stateChange(rIndex, cIndex, occupiedToNextState)
-      | Floor => Floor
+      | Seat.Floor => Seat.Floor
+      | Empty => seatsMap->EmptyState.nextWithIndex(rIndex, cIndex)
+      | Occupied => seatsMap->OccupiedState.nextWithIndex(rIndex, cIndex)
       }
     })
   });
 };
 
-let compareSeat = (beforeSeat, nextSeat) => beforeSeat == nextSeat;
-let rec compareCol = (beforeSeatCols, nextSeatCols, index): bool => {
-  let result = compareSeat(beforeSeatCols[index], nextSeatCols[index]);
+module SeatsCompare = {
+  type t = {
+    seat1: Seats.t,
+    seat2: Seats.t,
+  };
 
-  if (!result) {
-    result;
-  } else if (beforeSeatCols->Belt.Array.size == index + 1) {
-    result;
-  } else {
-    compareCol(beforeSeatCols, nextSeatCols, index + 1);
+  let isEqualSeatWithIndex = (seats, index) =>
+    seats.seat1[index] == seats.seat2[index];
+
+  let rec isEqualSeats = (seats, index): bool => {
+    let result = seats->isEqualSeatWithIndex(index);
+
+    if (!result || seats.seat1->Belt.Array.size == index + 1) {
+      result;
+    } else {
+      seats->isEqualSeats(index + 1);
+    };
+  };
+
+  let make = (seat1, seat2) => {
+    {seat1, seat2};
   };
 };
 
-let rec compareRow = (beforeSeats, nextSeats, index): bool => {
-  let result = compareCol(beforeSeats[index], nextSeats[index], 0);
+module SeatsMap = {
+  type t = {
+    seat1: array(Seats.t),
+    seat2: array(Seats.t),
+  };
 
-  if (!result) {
-    result;
-  } else if (beforeSeats->Belt.Array.size == index + 1) {
-    result;
-  } else {
-    compareRow(beforeSeats, nextSeats, index + 1);
+  let rec isEqualRow = (seatsMap, index): bool => {
+    let result =
+      SeatsCompare.make(seatsMap.seat1[index], seatsMap.seat2[index])
+      ->SeatsCompare.isEqualSeats(0);
+
+    if (!result || seatsMap.seat1->Belt.Array.size == index + 1) {
+      result;
+    } else {
+      seatsMap->isEqualRow(index + 1);
+    };
+  };
+
+  let isEqual = seatsMap => {
+    seatsMap->isEqualRow(0);
   };
 };
 
-let compare = (beforeSeats, nextSeats) => {
-  compareRow(beforeSeats, nextSeats, 0);
+
+let rec findNoChangeState = seatsMap => {
+  let seatsMap: SeatsMap.t = { // 확실한 네이밍 필요?..
+    seat1: seatsMap,
+    seat2: seatsMap->makeNextState,
+  };
+
+  seatsMap->SeatsMap.isEqual
+    ? seatsMap.seat2 : seatsMap.seat2->findNoChangeState;
 };
 
-let rec findNoChangeState = seats => {
-  let beforeSeats = seats;
-  let nextSeats = seats->nextState;
-
-  compare(beforeSeats, nextSeats) ? nextSeats : nextSeats->findNoChangeState;
-};
-
-let noChangeSeats = seats->findNoChangeState;
+let noChangeSeatsMap = seatsMap->findNoChangeState;
 let occupiedCount =
-  noChangeSeats->Belt.Array.reduce(0, (sum, row) => {
+  noChangeSeatsMap->Belt.Array.reduce(0, (sum, row) => {
     sum + row->Belt.Array.keep(seat => seat == Occupied)->Belt.Array.size
   });
 
