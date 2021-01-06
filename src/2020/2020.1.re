@@ -6,38 +6,60 @@ let years =
 
 // part1
 let currentYear = 2020;
-let rec findCurrentYearSet = (years, findYear, set, ~setCount) =>
-  if (set->Belt.List.size == setCount) {
-    let yearSum = set->Belt.List.reduce(0, (sum, year) => sum + year);
-    yearSum == findYear ? Some(set) : None;
+let rec findYearSet = (yearSets, years, ~findYear) => {
+  switch (yearSets->Belt.List.head) {
+  | Some(yearSet) =>
+    let yearSum = yearSet->Belt.List.reduce(0, (sum, index) => sum + years[index]);
+    let uniqueSize = yearSet->Belt.List.toArray->Belt.Set.Int.fromArray->Belt.Set.Int.size;
+    let setSize = yearSet->Belt.List.size;
+    if (uniqueSize == setSize && yearSum == findYear) {
+      Some(yearSet);
+    } else {
+      switch (yearSets->Belt.List.drop(1)) {
+      | Some(nextYearSets) => nextYearSets->findYearSet(years, ~findYear)
+      | None => None
+      };
+    }
+  | None => None
+  };
+};
+
+let rec makeYearIndexSets = (indexes, sets, ~setCount) =>
+  if (sets->Belt.List.size == 0) {
+    let sets = indexes->Belt.List.map(index => [index])
+    indexes->makeYearIndexSets(sets, ~setCount=setCount - 1)
   } else {
-    years->Belt.Array.reduceWithIndex(None, (beforeResult, year, index) => {
-      switch (
-        beforeResult,
-        years
-        ->Belt.Array.keepWithIndex((_, filterIndex) => index != filterIndex)
-        ->findCurrentYearSet(findYear, [year, ...set], ~setCount),
-      ) {
-      | (Some(a), _) => Some(a)
-      | (None, Some(a)) => Some(a)
-      | (None, None) => None
-      }
-    });
+    let sets = indexes->Belt.List.map(index => {
+      sets->Belt.List.map(set => [index, ...set])
+    })
+    let newSets = sets->Belt.List.toArray->Belt.List.concatMany;
+
+    setCount == 1
+      ? newSets : indexes->makeYearIndexSets(newSets, ~setCount=setCount - 1);
   };
 
-let sumTwoYearSet = years->findCurrentYearSet(currentYear, [], ~setCount=2);
+let twoYearIndexSets =
+  Belt.Array.range(0, years->Belt.Array.size - 1)
+  ->Belt.List.fromArray
+  ->makeYearIndexSets([], ~setCount=2);
+
+let sumTwoYearIndexSet = twoYearIndexSets->findYearSet(years, ~findYear=currentYear);
 Js.log(
-  switch (sumTwoYearSet) {
-  | Some(a) => a->Belt.List.reduce(1, (sum, year) => sum * year)
+  switch (sumTwoYearIndexSet) {
+  | Some(a) => a->Belt.List.reduce(1, (sum, index) => sum * years[index])
   | None => 0
   },
 );
 
 // part2
-let sumThreeYearSet = years->findCurrentYearSet(currentYear, [], ~setCount=3);
+let threeYearIndexSets =
+  Belt.Array.range(0, years->Belt.Array.size - 1)
+  ->Belt.List.fromArray
+  ->makeYearIndexSets([], ~setCount=3);
+let sumThreeYearIndexSet = threeYearIndexSets->findYearSet(years, ~findYear=currentYear);
 Js.log(
-  switch (sumThreeYearSet) {
-  | Some(a) => a->Belt.List.reduce(1, (sum, year) => sum * year)
+  switch (sumThreeYearIndexSet) {
+  | Some(a) => a->Belt.List.reduce(1, (sum, index) => sum * years[index])
   | None => 0
   },
 );
