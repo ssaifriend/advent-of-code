@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.8.sample", `utf8);
+let data = Node.Fs.readFileSync("input/2020/2020.8.input", `utf8);
 
 module Op = {
   type t =
@@ -38,83 +38,30 @@ type summary = {
   sum: int,
   currentIndex: int,
   indexes: list(int),
+  isSuccess: bool,
 };
 
+let initialState = {sum: 0, currentIndex: 0, indexes: [], isSuccess: false};
 let rec walk = (codes: array(Op.t), s): summary => {
-  switch (codes[s.currentIndex]) {
+  switch (codes->Belt.Array.get(s.currentIndex)) {
+  | None => {...s, isSuccess: true}
   | _ when s.indexes->Belt.List.some(index => index == s.currentIndex) => s
   
-  | Nop(_) =>
-    codes->walk({
-      ...s,
-      currentIndex: s.currentIndex + 1,
-      indexes: [s.currentIndex, ...s.indexes],
-    })
-  | Acc(value) => 
-    codes->walk({
-      sum: s.sum + value,
-      currentIndex: s.currentIndex + 1,
-      indexes: [s.currentIndex, ...s.indexes],
-    })
-  | Jmp(value) => 
-    codes->walk({
-      ...s,
-      currentIndex: s.currentIndex + value,
-      indexes: [s.currentIndex, ...s.indexes],
-    })
-  };
-};
-
-Js.log(codes->walk({sum: 0, currentIndex: 0, indexes: []}).sum);
-
-// part2 - 문제 재확인 필요;
-exception InvalidCode;
-exception InvalidIndex;
-
-let rec fixWalk = (codes: array(Op.t), s): summary => {
-  switch (codes->Belt.Array.get(s.currentIndex)) {
-  | None => s
-
-  | _ when s.indexes->Belt.List.some(index => index == s.currentIndex) => {
-    let prevIndex = s.indexes->Belt.List.head->Belt.Option.getExn;
-    let changedCode = 
-      switch (codes[prevIndex]) {
-        | Acc(value) => Op.Jmp(value)
-        | Jmp(value) => Acc(value)
-        | _ => raise(InvalidCode)
-      }
-    let revertSum = 
-      switch (codes[prevIndex]) {
-        | Acc(value) => s.sum - value
-        | _ => s.sum
-      }
-
-    let _ = codes->Belt.Array.set(prevIndex, changedCode);
-
-    codes->fixWalk({
-      sum: revertSum,
-      currentIndex: prevIndex,
-      indexes: switch (s.indexes->Belt.List.drop(1)) {
-        | Some(i) => i
-        | None => raise(InvalidIndex)
-      },
-    })
-  }
-  
   | Some(Nop(_)) =>
-    codes->fixWalk({
+    codes->walk({
       ...s,
       currentIndex: s.currentIndex + 1,
       indexes: [s.currentIndex, ...s.indexes],
     })
-  | Some(Acc(value)) =>
-    codes->fixWalk({
+  | Some(Acc(value)) => 
+    codes->walk({
+      ...s,
       sum: s.sum + value,
       currentIndex: s.currentIndex + 1,
       indexes: [s.currentIndex, ...s.indexes],
     })
   | Some(Jmp(value)) => 
-    codes->fixWalk({
+    codes->walk({
       ...s,
       currentIndex: s.currentIndex + value,
       indexes: [s.currentIndex, ...s.indexes],
@@ -122,4 +69,31 @@ let rec fixWalk = (codes: array(Op.t), s): summary => {
   };
 };
 
-Js.log(codes->fixWalk({sum: 0, currentIndex: 0, indexes: []}).sum);
+Js.log(codes->walk(initialState).sum);
+
+// part2
+
+let changeCode = (codes, changeIndex) => {
+  open Op;
+
+  codes
+  ->Belt.Array.mapWithIndex(
+    (index, code) => {
+      let isChangeIndex = index == changeIndex;
+      switch (isChangeIndex, code) {
+        | (true, Jmp(value)) => Nop(value)
+        | (true, Nop(value)) => Jmp(value)
+        | (_, value) => value
+      }
+    }
+  );
+}
+
+let rec findNotInfSummary = (codes, index) => {
+  let changedCodes = codes->changeCode(index);
+  let s = changedCodes->walk(initialState);
+  
+  s.isSuccess ? s.sum : codes->findNotInfSummary(index - 1);
+}
+
+Js.log(codes->findNotInfSummary(codes->Belt.Array.size - 1));
