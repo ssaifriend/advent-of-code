@@ -139,3 +139,103 @@ Js.log(
   movedPosition.coord.x->Js.Math.abs_int
   + movedPosition.coord.y->Js.Math.abs_int,
 );
+
+
+// part2
+module ShipWithWayPoint = {
+  open Action;
+
+  type t = {
+    coord: Coord.t,
+    unit: Coord.t,
+  };
+
+  let rec rotate = (pos, operation: Operation.t) => {
+    let unit: Coord.t =
+      switch (operation.action) {
+      | Right => {y: pos.unit.x * -1, x: pos.unit.y}
+      | Left => {y: pos.unit.x, x: pos.unit.y * -1}
+      | _ => pos.unit
+      };
+
+    let movedPosition = {...pos, unit: unit};
+    if (operation.value - 90 > 0) {
+      movedPosition->rotate({...operation, value: operation.value - 90});
+    } else {
+      movedPosition;
+    };
+  };
+
+  let moveWayPoint = (pos, action, value) => {
+    let moveX = (pos, op, value) => {
+      {
+        ...pos,
+        unit: {
+          ...pos.unit,
+          x: op(pos.unit.x, value),
+        },
+      };
+    };
+
+    let moveY = (pos, op, value) => {
+      {
+        ...pos,
+        unit: {
+          ...pos.unit,
+          y: op(pos.unit.y, value),
+        },
+      };
+    };
+
+    switch (action) {
+    | East => pos->moveX((+), value)
+    | West => pos->moveX((-), value)
+    | North => pos->moveY((+), value)
+    | South => pos->moveY((-), value)
+    | _ => pos
+    };
+  };
+
+  let moveDirection = (pos, value) => {
+    {
+      ...pos,
+      coord: {
+        x: pos.coord.x + value * pos.unit.x,
+        y: pos.coord.y + value * pos.unit.y,
+      },
+    };
+  };
+
+  let move = (pos, operation: Operation.t) => {
+    switch (operation.action) {
+    | Left
+    | Right => pos->rotate(operation)
+    | East
+    | West
+    | North
+    | South => pos->moveWayPoint(operation.action, operation.value)
+    | Forward => pos->moveDirection(operation.value)
+    };
+  };
+};
+
+let initialPosition: ShipWithWayPoint.t = {
+  coord: {
+    x: 0,
+    y: 0,
+  },
+  unit: {
+    x: 10,
+    y: 1,
+  },
+};
+let movedPosition =
+  operations->Belt.Array.reduce(initialPosition, (pos, operation) =>
+    pos->ShipWithWayPoint.move(operation)
+  );
+
+Js.log(movedPosition);
+Js.log(
+  movedPosition.coord.x->Js.Math.abs_int
+  + movedPosition.coord.y->Js.Math.abs_int,
+);
