@@ -9,12 +9,12 @@ module Seat = {
 
   exception InvalidState;
 
-  let make = (inputStr) => 
+  let make = inputStr =>
     switch (inputStr) {
     | "L" => Empty
     | "." => Floor
     | _ => raise(InvalidState)
-    }
+    };
 };
 
 module Seats = {
@@ -27,52 +27,62 @@ module Coord = {
     col: int,
   };
 
-  let makeAroundCoords = (r, c) => {
+  let makeAroundCoords = coord => {
     [
-      {row: r - 1, col: c - 1},
-      {row: r - 1, col: c},
-      {row: r - 1, col: c + 1},
-      {row: r, col: c - 1},
-      // {row: r, col: c}, // 내 위치
-      {row: r, col: c + 1},
-      {row: r + 1, col: c - 1},
-      {row: r + 1, col: c},
-      {row: r + 1, col: c + 1},
+      {row: coord.row - 1, col: coord.col - 1},
+      {row: coord.row - 1, col: coord.col},
+      {row: coord.row - 1, col: coord.col + 1},
+      {row: coord.row, col: coord.col - 1},
+      // {row: coord.row, col: coord.col}, // 내 위치
+      {row: coord.row, col: coord.col + 1},
+      {row: coord.row + 1, col: coord.col - 1},
+      {row: coord.row + 1, col: coord.col},
+      {row: coord.row + 1, col: coord.col + 1},
+    ];
+  };
+
+  let makeDirections = () => {
+    [
+      {row: (-1), col: (-1)},
+      {row: (-1), col: 0},
+      {row: (-1), col: 1},
+      {row: 0, col: (-1)},
+      // {row: 0, col: 0}, // 내 위치
+      {row: 0, col: 1},
+      {row: 1, col: (-1)},
+      {row: 1, col: 0},
+      {row: 1, col: 1},
     ];
   };
 };
 
-
 let seatsMap =
   rows->Belt.Array.map(row => {
-    row
-    ->Js.String2.split("")
-    ->Belt.Array.map(Seat.make)
+    row->Js.String2.split("")->Belt.Array.map(Seat.make)
   });
 
-
 // part1
-let occupiedCount = (seatsMap, positions: list(Coord.t)) => {
-  positions
-  ->Belt.List.map(position => {
-      switch (seatsMap->Belt.Array.get(position.row)) {
-      | None => false
-      | Some(seats) =>
-        switch (seats->Belt.Array.get(position.col)) {
-        | Some(seat) => seat == Seat.Occupied
-        | _ => false
-        }
-      }
-    })
-  ->Belt.List.keep(x => x)
-  ->Belt.List.size;
-};
-
 module type MakeNextState = {let next: int => Seat.t;};
 
 module NextState = (Item: MakeNextState) => {
-  let nextWithIndex = (seatsMap, r, c) => {
-    let positions = Coord.makeAroundCoords(r, c);
+  let occupiedCount = (seatsMap, positions: list(Coord.t)) => {
+    positions
+    ->Belt.List.map(position => {
+        switch (seatsMap->Belt.Array.get(position.row)) {
+        | None => false
+        | Some(seats) =>
+          switch (seats->Belt.Array.get(position.col)) {
+          | Some(seat) => seat == Seat.Occupied
+          | _ => false
+          }
+        }
+      })
+    ->Belt.List.keep(x => x)
+    ->Belt.List.size;
+  };
+
+  let nextWithIndex = (seatsMap, coord: Coord.t) => {
+    let positions = Coord.makeAroundCoords(coord);
     let occupiedCount = seatsMap->occupiedCount(positions);
 
     Item.next(occupiedCount);
@@ -91,17 +101,6 @@ module MakeOccupiedNextState = {
 };
 module OccupiedState = NextState(MakeOccupiedNextState);
 
-let makeNextState = seatsMap => {
-  seatsMap->Belt.Array.mapWithIndex((rIndex, seats) => {
-    seats->Belt.Array.mapWithIndex((cIndex, seat) => {
-      switch (seat) {
-      | Seat.Floor => Seat.Floor
-      | Empty => seatsMap->EmptyState.nextWithIndex(rIndex, cIndex)
-      | Occupied => seatsMap->OccupiedState.nextWithIndex(rIndex, cIndex)
-      }
-    })
-  });
-};
 
 module SeatsCompare = {
   type t = {
@@ -150,21 +149,134 @@ module SeatsMap = {
   };
 };
 
-
-let rec findNoChangeState = seatsMap => {
-  let seatsMap: SeatsMap.t = { // 확실한 네이밍 필요?..
-    seat1: seatsMap,
-    seat2: seatsMap->makeNextState,
-  };
-
-  seatsMap->SeatsMap.isEqual
-    ? seatsMap.seat2 : seatsMap.seat2->findNoChangeState;
+let printMap = seatsMap => {
+  seatsMap->Belt.Array.forEach(seats => {
+    Js.log(
+      seats
+      ->Belt.Array.map(seat =>
+          switch (seat) {
+          | Seat.Occupied => "#"
+          | Empty => "L"
+          | Floor => "."
+          }
+        )
+      ->Js.Array2.joinWith(""),
+    )
+  });
+  Js.log("");
 };
 
-let noChangeSeatsMap = seatsMap->findNoChangeState;
-let occupiedCount =
-  noChangeSeatsMap->Belt.Array.reduce(0, (sum, row) => {
-    sum + row->Belt.Array.keep(seat => seat == Occupied)->Belt.Array.size
+module SeatChanger = {
+  let makeNextState = (seatsMap, emptyStateChanger, occupiedStatechanger) => {
+    seatsMap->Belt.Array.mapWithIndex((rIndex, seats) => {
+      seats->Belt.Array.mapWithIndex((cIndex, seat) => {
+        let coord: Coord.t = {row: rIndex, col: cIndex};
+        switch (seat) {
+        | Seat.Floor => Seat.Floor
+        | Empty => seatsMap->emptyStateChanger(coord)
+        | Occupied => seatsMap->occupiedStatechanger(coord)
+        };
+      })
+    });
+  };
+
+  let rec findNoChangeState =
+          (seatsMap, emptyStateChanger, occupiedStatechanger) => {
+    let seatsMap: SeatsMap.t = {
+      // 확실한 네이밍 필요?..
+      seat1: seatsMap,
+      seat2: seatsMap->makeNextState(emptyStateChanger, occupiedStatechanger),
+    };
+
+    // seatsMap.seat2->printMap;
+
+    seatsMap->SeatsMap.isEqual
+      ? seatsMap.seat2
+      : seatsMap.seat2
+        ->findNoChangeState(emptyStateChanger, occupiedStatechanger);
+  };
+};
+
+
+let occupiedCounter = seatsMap => {
+  seatsMap->Belt.Array.reduce(0, (sum, row) => {
+    sum + row->Belt.Array.keep(seat => seat == Seat.Occupied)->Belt.Array.size
   });
+};
+
+let noChangeSeatsMap =
+  seatsMap->SeatChanger.findNoChangeState(
+    EmptyState.nextWithIndex,
+    OccupiedState.nextWithIndex,
+  );
+let occupiedCount = noChangeSeatsMap->occupiedCounter;
+
+Js.log(occupiedCount);
+
+// part2
+module NextState2 = (Item: MakeNextState) => {
+  type t =
+    | IndexOverflow
+    | IsOccupied
+    | GoToNextSeat
+    | NotOccupied;
+
+  let rec getOccupied = (seatsMap, direction: Coord.t, coord: Coord.t) => {
+    let result =
+      switch (seatsMap->Belt.Array.get(coord.row)) {
+      | None => IndexOverflow
+      | Some(seats) =>
+        switch (seats->Belt.Array.get(coord.col)) {
+        | None => IndexOverflow
+        | Some(Seat.Floor) => GoToNextSeat
+        | Some(Occupied) => IsOccupied
+        | _ => NotOccupied
+        }
+      };
+
+    switch (result) {
+    | IsOccupied => true
+    | GoToNextSeat =>
+      seatsMap->getOccupied(
+        direction,
+        {row: coord.row + direction.row, col: coord.col + direction.col},
+      )
+    | IndexOverflow | NotOccupied => false
+    };
+  };
+
+  let occupiedCount = (seatsMap, directions: list(Coord.t), coord: Coord.t) => {
+    directions
+    ->Belt.List.map(direction =>
+        seatsMap->getOccupied(
+          direction,
+          {row: coord.row + direction.row, col: coord.col + direction.col},
+        )
+      )
+    ->Belt.List.keep(x => x)
+    ->Belt.List.size;
+  };
+
+  let nextWithIndex = (seatsMap, coord: Coord.t) => {
+    let directions = Coord.makeDirections();
+    let occupiedCount = seatsMap->occupiedCount(directions, coord);
+
+    Item.next(occupiedCount);
+  };
+};
+
+module EmptyState2 = NextState2(MakeEmptyNextState);
+module MakeOccupiedNextState2 = {
+  open Seat;
+  let next = occupiedCount => occupiedCount >= 5 ? Empty : Occupied;
+};
+module OccupiedState2 = NextState2(MakeOccupiedNextState2);
+
+let noChangeSeatsMap =
+  seatsMap->SeatChanger.findNoChangeState(
+    EmptyState2.nextWithIndex,
+    OccupiedState2.nextWithIndex,
+  );
+let occupiedCount = noChangeSeatsMap->occupiedCounter;
 
 Js.log(occupiedCount);
