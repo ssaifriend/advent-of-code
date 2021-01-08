@@ -4,17 +4,13 @@ module MaskBit = {
     | One(int)
     | None(int);
 
+  let makeOneMaskBit = (index, maskLen) => {
+    let actualBit = maskLen - index - 1;
+    Int64.one->Int64.shift_left(actualBit);
+  };
+
   let makeZeroMaskBit = (index, maskLen) => {
-    let actualBit = maskLen - index;
-    Int64.max_int
-    ->Int64.shift_right(actualBit)
-    ->Int64.shift_left(actualBit)
-    ->Int64.add(
-        Int64.one
-        ->Int64.shift_left(actualBit)
-        ->Int64.sub(Int64.one)
-        ->Int64.shift_right(1),
-      );
+    index->makeOneMaskBit(maskLen)->Int64.lognot;
   };
 };
 
@@ -105,12 +101,10 @@ module ValueMaskConverter = {
           ...masks,
           zero: [index->MaskBit.makeZeroMaskBit(maskLen), ...masks.zero],
         }
-      | One(index) =>
-        let actualBit = maskLen - index - 1;
-        {
+      | One(index) => {
           ...masks,
-          one: [Int64.one->Int64.shift_left(actualBit), ...masks.one],
-        };
+          one: [index->MaskBit.makeOneMaskBit(maskLen), ...masks.one],
+        }
       | None(_) => masks
       }
     });
@@ -215,14 +209,11 @@ module AddressMaskConverter = {
 
     maskInput->Belt.Array.reduce(masks, (masks, mask) => {
       switch (mask) {
-      | MaskBit.None(index) =>
-        {...masks, x: [index, ...masks.x]};
-      | One(index) =>
-        let actualBit = maskLen - index - 1;
-        {
+      | MaskBit.None(index) => {...masks, x: [index, ...masks.x]}
+      | One(index) => {
           ...masks,
-          one: [Int64.one->Int64.shift_left(actualBit), ...masks.one],
-        };
+          one: [index->MaskBit.makeOneMaskBit(maskLen), ...masks.one],
+        }
       | Zero(_) => masks
       }
     });
@@ -288,16 +279,18 @@ module DockingMemoryV2 = {
       ->makeIndexSets([])
       ->Belt.List.map(sets => {
           sets->Belt.List.reduce(
-            oneProcessedAddress, (address, (index, bit)) => {
-            let rightLen = AddressMaskConverter.maskLen - index - 1;
-            bit == 1
-              ? address->Int64.logor(Int64.one->Int64.shift_left(rightLen))
-              : address->Int64.logand(
-                  index->MaskBit.makeZeroMaskBit(
-                    AddressMaskConverter.maskLen,
-                  ),
-                )
-          })
+            oneProcessedAddress,
+            (address, (index, bit)) => {
+              let maskLen = AddressMaskConverter.maskLen;
+              bit == 1
+                ? address->Int64.logor(
+                    index->MaskBit.makeOneMaskBit(maskLen),
+                  )
+                : address->Int64.logand(
+                    index->MaskBit.makeZeroMaskBit(maskLen),
+                  );
+            },
+          )
         })
       ->Belt.List.toArray;
     };
