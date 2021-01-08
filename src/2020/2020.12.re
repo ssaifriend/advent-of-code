@@ -130,9 +130,7 @@ let initialPosition: Ship.t = {
   direction: Action.East,
 };
 let movedPosition =
-  operations->Belt.Array.reduce(initialPosition, (pos, operation) =>
-    pos->Ship.move(operation)
-  );
+  operations->Belt.Array.reduce(initialPosition, Ship.move);
 
 Js.log(movedPosition);
 Js.log(
@@ -230,9 +228,7 @@ let initialPosition: ShipWithWayPoint.t = {
   },
 };
 let movedPosition =
-  operations->Belt.Array.reduce(initialPosition, (pos, operation) =>
-    pos->ShipWithWayPoint.move(operation)
-  );
+  operations->Belt.Array.reduce(initialPosition, ShipWithWayPoint.move);
 
 Js.log(movedPosition);
 Js.log(

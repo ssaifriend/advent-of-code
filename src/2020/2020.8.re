@@ -34,38 +34,48 @@ module Op = {
 let codes = data->Js.String2.split("\n")->Belt.Array.map(Op.make);
 
 // part1
+type loopState =
+  | Loop
+  | Inf
+  | Complete;
+
 type summary = {
   sum: int,
   currentIndex: int,
   indexes: list(int),
-  isSuccess: bool,
+  loopState,
 };
 
-let initialState = {sum: 0, currentIndex: 0, indexes: [], isSuccess: false};
+let initialState = {sum: 0, currentIndex: 0, indexes: [], loopState: Loop};
 let rec walk = (codes: array(Op.t), s): summary => {
-  switch (codes->Belt.Array.get(s.currentIndex)) {
-  | None => {...s, isSuccess: true}
-  | _ when s.indexes->Belt.List.some(index => index == s.currentIndex) => s
-  
-  | Some(Nop(_)) =>
-    codes->walk({
-      ...s,
-      currentIndex: s.currentIndex + 1,
-      indexes: [s.currentIndex, ...s.indexes],
-    })
-  | Some(Acc(value)) => 
-    codes->walk({
-      ...s,
-      sum: s.sum + value,
-      currentIndex: s.currentIndex + 1,
-      indexes: [s.currentIndex, ...s.indexes],
-    })
-  | Some(Jmp(value)) => 
-    codes->walk({
-      ...s,
-      currentIndex: s.currentIndex + value,
-      indexes: [s.currentIndex, ...s.indexes],
-    })
+  let result =
+    switch (codes->Belt.Array.get(s.currentIndex)) {
+    | None => {...s, loopState: Complete}
+
+    | Some(Nop(_)) => {
+        ...s,
+        currentIndex: s.currentIndex + 1,
+        indexes: [s.currentIndex, ...s.indexes],
+      }
+    | Some(Acc(value)) => {
+        ...s,
+        sum: s.sum + value,
+        currentIndex: s.currentIndex + 1,
+        indexes: [s.currentIndex, ...s.indexes],
+      }
+    | Some(Jmp(value)) => {
+        ...s,
+        currentIndex: s.currentIndex + value,
+        indexes: [s.currentIndex, ...s.indexes],
+      }
+    };
+
+  if (result.loopState == Complete) {
+    result;
+  } else if (s.indexes->Belt.List.some(index => index == s.currentIndex)) {
+    {...s, loopState: Inf};
+  } else {
+    codes->walk(result);
   };
 };
 
@@ -74,26 +84,29 @@ Js.log(codes->walk(initialState).sum);
 // part2
 
 let changeCode = (codes, changeIndex) => {
-  open Op;
-
-  codes
-  ->Belt.Array.mapWithIndex(
-    (index, code) => {
+  Op.(
+    codes->Belt.Array.mapWithIndex((index, code) => {
       let isChangeIndex = index == changeIndex;
       switch (isChangeIndex, code) {
-        | (true, Jmp(value)) => Nop(value)
-        | (true, Nop(value)) => Jmp(value)
-        | (_, value) => value
-      }
-    }
+      | (true, Jmp(value)) => Nop(value)
+      | (true, Nop(value)) => Jmp(value)
+      | (_, value) => value
+      };
+    })
   );
-}
+};
+
+exception InvalidLoopState;
 
 let rec findNotInfSummary = (codes, index) => {
   let changedCodes = codes->changeCode(index);
   let s = changedCodes->walk(initialState);
-  
-  s.isSuccess ? s.sum : codes->findNotInfSummary(index - 1);
-}
+
+  switch (s.loopState) {
+  | Inf => codes->findNotInfSummary(index - 1)
+  | Complete => s.sum
+  | Loop => raise(InvalidLoopState)
+  };
+};
 
 Js.log(codes->findNotInfSummary(codes->Belt.Array.size - 1));
