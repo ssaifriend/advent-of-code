@@ -2,8 +2,6 @@ let data = Node.Fs.readFileSync("input/2020/2020.9.input", `utf8);
 let numbers =
   data->Js.String2.split("\n")->Belt.Array.keepMap(Belt.Float.fromString);
 
-// 더 쉽게 만들어보기
-
 // part1
 // form 2020.1
 let rec findNumberSet = (numberSets, numbers, ~findNumber) => {
