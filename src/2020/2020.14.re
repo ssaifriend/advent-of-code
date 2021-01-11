@@ -42,7 +42,7 @@ module Mask = (Converter: MaskOperation) => {
 module MemoryOperation = {
   type t = {
     address: int,
-    value: int,
+    value: Int64.t,
   };
 
   exception InvalidInput;
@@ -53,10 +53,11 @@ module MemoryOperation = {
     switch (result) {
     | Some(r) =>
       let captures =
-        Js.Re.captures(r)
-        ->Belt.Array.keepMap(Js.Nullable.toOption)
-        ->Belt.Array.keepMap(Belt.Int.fromString);
-      {address: captures[0], value: captures[1]}; // 전체 문자인 0번은 빠짐
+        Js.Re.captures(r)->Belt.Array.keepMap(Js.Nullable.toOption);
+      {
+        address: captures[1]->Belt.Int.fromString->Belt.Option.getExn,
+        value: captures[2]->Int64.of_string,
+      };
     | None => raise(InvalidInput)
     };
   };
@@ -70,16 +71,18 @@ module Operation = (Converter: MaskOperation) => {
   exception InvalidOperations;
 
   module MaskConveter = Mask(Converter);
-  module Array = Belt.Array;
+  module List = Belt.List;
 
   let make = inputStrs => {
-    inputStrs->Belt.Array.map(inputStr =>
-      switch (inputStr->Js.String2.slice(~from=0, ~to_=4)) {
-      | "mask" => Mask(inputStr->MaskConveter.make)
-      | "mem[" => MemoryOperation(inputStr->MemoryOperation.make)
-      | _ => raise(InvalidOperations)
-      }
-    );
+    inputStrs
+    ->Belt.Array.map(inputStr =>
+        switch (inputStr->Js.String2.slice(~from=0, ~to_=4)) {
+        | "mask" => Mask(inputStr->MaskConveter.make)
+        | "mem[" => MemoryOperation(inputStr->MemoryOperation.make)
+        | _ => raise(InvalidOperations)
+        }
+      )
+    ->Belt.List.fromArray;
   };
 };
 
@@ -137,7 +140,7 @@ module DockingMemory = {
       let zeroProcessedValue =
         mask.zero
         ->ValueOperation.MaskConveter.List.reduce(
-            Int64.of_int(op.value), (value, maskValue) => {
+            op.value, (value, maskValue) => {
             value->Int64.logand(maskValue)
           });
 
@@ -149,23 +152,24 @@ module DockingMemory = {
     };
 
     let result =
-      switch (operations[0]) {
-      | ValueOperation.Mask(m) => {...state, currentMask: m}
-      | MemoryOperation(op) =>
+      switch (operations->ValueOperation.List.head) {
+      | Some(ValueOperation.Mask(m)) => {...state, currentMask: m}
+      | Some(MemoryOperation(op)) =>
         let value = op->makeValue(state.currentMask);
 
         {...state, memory: state.memory->Memory.Map.set(op.address, value)};
+      | None => state
       };
 
     // result.memory->Memory.print;
-    if (operations->ValueOperation.Array.size == 1) {
-      result;
-    } else {
-      result->operation(operations->ValueOperation.Array.sliceToEnd(1));
+
+    switch (operations->ValueOperation.List.drop(1)) {
+    | Some(newOperations) => result->operation(newOperations)
+    | None => result
     };
   };
 
-  let start = (operations: array(ValueOperation.t)) => {
+  let start = (operations: list(ValueOperation.t)) => {
     let initialState = {
       memory: Memory.Map.fromArray([||]),
       currentMask: {
@@ -229,13 +233,13 @@ module Int64Cmp =
   });
 
 module MemoryV2 = {
-  type t = Belt.Map.t(Int64.t, int, Int64Cmp.identity);
+  type t = Belt.Map.t(Int64.t, Int64.t, Int64Cmp.identity);
 
   module Map = Belt.Map;
 
   let print = memory => {
     memory->Map.forEach((key, value) => {
-      Js.log(key->Int64.to_string ++ " / " ++ value->Belt.Int.toString)
+      Js.log(key->Int64.to_string ++ " / " ++ value->Int64.to_string)
     });
   };
 };
@@ -296,28 +300,30 @@ module DockingMemoryV2 = {
     };
 
     let result =
-      switch (operations[0]) {
-      | AddressOperation.Mask(m) => {...state, currentMask: m}
-      | MemoryOperation(op) =>
+      switch (operations->AddressOperation.List.head) {
+      | Some(AddressOperation.Mask(m)) => {...state, currentMask: m}
+      | Some(MemoryOperation(op)) =>
         op
         ->makeAddresses(state.currentMask)
-        ->AddressOperation.Array.reduce(state, (oldState, address) => {
+        ->Belt.Array.reduce(state, (oldState, address) => {
             {
               ...oldState,
-              memory: oldState.memory->MemoryV2.Map.set(address, op.value),
+              memory:
+                oldState.memory
+                ->MemoryV2.Map.set(address, op.value),
             }
           })
+      | None => state
       };
 
     // result.memory->MemoryV2.print;
-    if (operations->AddressOperation.Array.size == 1) {
-      result;
-    } else {
-      result->operation(operations->AddressOperation.Array.sliceToEnd(1));
+    switch (operations->AddressOperation.List.drop(1)) {
+    | Some(newOperations) => result->operation(newOperations)
+    | None => result
     };
   };
 
-  let start = (operations: array(AddressOperation.t)) => {
+  let start = (operations: list(AddressOperation.t)) => {
     let initialState = {
       memory: Belt.Map.make(~id=(module Int64Cmp)),
       currentMask: {
@@ -332,13 +338,13 @@ module DockingMemoryV2 = {
   let memorySum = state => {
     state.memory
     ->MemoryV2.Map.reduce(Int64.zero, (sum, _, value) =>
-        sum->Int64.add(value->Int64.of_int)
+        sum->Int64.add(value)
       );
   };
 };
 
 let data2 = Node.Fs.readFileSync("input/2020/2020.14.2.sample", `utf8);
-// let data2 = Node.Fs.readFileSync("input/2020/2020.14.input", `utf8);
+let data2 = Node.Fs.readFileSync("input/2020/2020.14.input", `utf8);
 let rows2 = data2->Js.String2.split("\n");
 let operations = rows2->AddressOperation.make;
 let state = operations->DockingMemoryV2.start;
