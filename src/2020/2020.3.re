@@ -3,7 +3,7 @@ let data = Node.Fs.readFileSync("input/2020/2020.3.input", `utf8);
 module Ground = {
   type t = {hasTree: bool};
 
-  let make = (inputStr) => {
+  let make = inputStr => {
     switch (inputStr) {
     | "#" => {hasTree: true}
     | _ => {hasTree: false}
@@ -11,90 +11,73 @@ module Ground = {
   };
 };
 
-let grounds =
-  Js.String.split("\n", data)
-  ->Belt.Array.map(row => {
-      Js.String.split("", row)->Belt.Array.map(Ground.make)
-    });
+module Grounds = {
+  type t = array(Ground.t);
+
+  let make = inputStrs => {
+    inputStrs
+    ->Js.String2.split("\n")
+    ->Belt.Array.map(row => {
+        Js.String.split("", row)->Belt.Array.map(Ground.make)
+      });
+  };
+};
+
+let grounds = data->Grounds.make;
 
 // part1
-type cord = {
-  x: int,
-  y: int,
-};
-type walkAround = {
-  cord,
-  list: list(Ground.t),
-};
+module TreeCounter = {
+  type coord_t = {
+    x: int,
+    y: int,
+  };
 
-let groundColLength = grounds[0]->Belt.Array.length;
-let walked =
-  grounds->Belt.Array.reduce(
-    {
-      cord: {
-        x: 1,
-        y: 1,
+  type t = {
+    coord: coord_t,
+    list: list(Ground.t),
+  };
+
+  let walk = (grounds, pattern) => {
+    let initial = {
+      coord: {
+        x: 0,
+        y: 0,
       },
       list: [],
-    }, (walk, eachGrounds) => {
-    {
-      cord: {
-        x:
-          walk.cord.x + 3 > groundColLength
-            ? walk.cord.x + 3 - groundColLength : walk.cord.x + 3,
-        y: walk.cord.y + 1,
-      },
-      list: [eachGrounds[walk.cord.x - 1], ...walk.list],
-    }
-  });
-let treeCount =
-  walked.list->Belt.List.keep(ground => ground.hasTree)->Belt.List.length;
+    };
 
-Js.log(treeCount);
-
-// part2
-// let groundColLength = grounds[0]->Belt.Array.length; // part1 에서 이미 정의함
-let groundRowLength = grounds->Belt.Array.length;
-let movePatterns = [
-  {x: 1, y: 1},
-  {x: 3, y: 1},
-  {x: 5, y: 1},
-  {x: 7, y: 1},
-  {x: 1, y: 2},
-];
-let eachTreeCount =
-  movePatterns->Belt.List.map(movePattern => {
+    let groundColLength = grounds[0]->Belt.Array.length;
+    let groundRowLength = grounds->Belt.Array.length;
     let walked =
-      Belt.Array.rangeBy(1, groundRowLength, ~step=movePattern.y)
-      ->Belt.Array.reduce(
+      Belt.Array.rangeBy(0, groundRowLength - 1, ~step=pattern.y)
+      ->Belt.Array.reduce(initial, (walk, row) => {
           {
-            cord: {
-              x: 1,
-              y: 1,
+            coord: {
+              x: (walk.coord.x + pattern.x) mod groundColLength,
+              y: row,
             },
-            list: [],
-          }, (walk, currentRow) => {
-          {
-            cord: {
-              x:
-                walk.cord.x + movePattern.x > groundColLength
-                  ? walk.cord.x + movePattern.x - groundColLength
-                  : walk.cord.x + movePattern.x,
-              y: currentRow,
-            },
-            list: [grounds[currentRow - 1][walk.cord.x - 1], ...walk.list],
+            list: [grounds[row][walk.coord.x], ...walk.list],
           }
         });
 
     walked.list
     ->Belt.List.keep(ground => ground.hasTree)
-    ->Belt.List.length
+    ->Belt.List.size
     ->Belt.Float.fromInt;
-  });
+  };
+};
 
-let treeCountMultiply =
-  eachTreeCount->Belt.List.reduce(1.0, (multiply, treeCount) =>
-    multiply *. treeCount
-  );
+// part2
+// let groundColLength = grounds[0]->Belt.Array.length; // part1 에서 이미 정의함
+let movePatterns: array(TreeCounter.coord_t) = [|
+  {x: 1, y: 1},
+  {x: 3, y: 1},
+  {x: 5, y: 1},
+  {x: 7, y: 1},
+  {x: 1, y: 2},
+|];
+let eachTreeCount =
+  movePatterns->Belt.Array.map(pattern => grounds->TreeCounter.walk(pattern));
 
-Js.log(treeCountMultiply);
+Js.log(eachTreeCount);
+Js.log(eachTreeCount->Belt.Array.reduce(1.0, ( *. )));

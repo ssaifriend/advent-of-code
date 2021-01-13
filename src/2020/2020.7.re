@@ -70,9 +70,9 @@ let rec findContainBags = (contains, allBags, findBagName) => {
       switch (
         allBags->Belt.Array.getBy((bag: Bag.t) => bag.name == containBag.name)
       ) {
+      | None => false
       | Some(containBags) =>
         containBags.contains->findContainBags(allBags, findBagName)
-      | None => false
       }
     )
   });
@@ -91,12 +91,12 @@ Js.log(matchBagCount);
 // let findBagName = "shiny gold"; // part1 에서 정의
 let rec summerizer = (allBags, bagName) => {
   switch (allBags->Belt.Array.getBy((b: Bag.t) => b.name == bagName)) {
+  | None => 0
   | Some(findBag) =>
     findBag.contains
     ->Belt.List.reduce(1, (sum, containBag) =>
         sum + allBags->summerizer(containBag.name) * containBag.count
       )
-  | None => 0
   };
 };
 

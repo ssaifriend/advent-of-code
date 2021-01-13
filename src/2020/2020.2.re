@@ -10,7 +10,9 @@ module Password = {
     password: string,
   };
 
-  let make = (inputStr): option(t) => {
+  exception InvalidInput;
+
+  let make = inputStr => {
     let passwordRe = Js.Re.fromString("([0-9]+)-([0-9]+) ([a-z]): ([a-z]+)");
     let result = passwordRe->Js.Re.exec_(inputStr);
     switch (result) {
@@ -21,47 +23,43 @@ module Password = {
         ->Belt.Array.keepMap(x => x);
       let first = captures[1]->Belt.Int.fromString->Belt.Option.getExn;
       let second = captures[2]->Belt.Int.fromString->Belt.Option.getExn;
-      Some({
+      {
         min: first,
         max: second,
         first,
         second,
         char: captures[3],
         password: captures[4],
-      });
-    | None => None
+      };
+    | None => raise(InvalidInput)
     };
   };
 };
 
 let passwordSets =
-  Js.String.split("\n", data)
-  ->Belt.Array.keepMap(Password.make)
+  Js.String.split("\n", data)->Belt.Array.map(Password.make);
 
 // part1
-let validPasswordSetCount =
-  passwordSets
-  ->Belt.Array.keep(({char, min, password, max}) => {
-      let charCount =
-        Js.String.split("", password)
-        ->Belt.Array.keep(x => char == x)
-        ->Belt.Array.length;
+let isValid = ({char, min, password, max}: Password.t) => {
+  let charCount =
+    Js.String.split("", password)
+    ->Belt.Array.keep(x => char == x)
+    ->Belt.Array.length;
 
-      min <= charCount && charCount <= max;
-    })
-  ->Belt.Array.length;
+  min <= charCount && charCount <= max;
+};
 
-Js.log(validPasswordSetCount);
+Js.log(passwordSets->Belt.Array.keep(isValid)->Belt.Array.size);
 
 // part2
-let validPasswordSetCount2 =
-  passwordSets
-  ->Belt.Array.keep(set => {
-      (set.password.[set.first - 1] == set.char.[0]
-      && set.password.[set.second - 1] != set.char.[0])
-      || (set.password.[set.first - 1] != set.char.[0]
-      && set.password.[set.second - 1] == set.char.[0])
-    })
-  ->Belt.Array.length;
+let isValid2 = (set: Password.t) =>
+  switch (
+    set.password.[set.first - 1] == set.char.[0],
+    set.password.[set.second - 1] == set.char.[0],
+  ) {
+  | (true, false)
+  | (false, true) => true
+  | _ => false
+  };
 
-Js.log(validPasswordSetCount2);
+Js.log(passwordSets->Belt.Array.keep(isValid2)->Belt.Array.size);
