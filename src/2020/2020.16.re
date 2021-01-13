@@ -27,6 +27,21 @@ module Field = {
     | None => raise(InvalidField)
     };
   };
+
+  let isNumberInRange = (number, start, end_) => {
+    number >= start && number <= end_;
+  };
+
+  let isTicketInFieldRange = (field, ticket) => {
+    switch (
+      ticket->isNumberInRange(field.firstRangeStart, field.firstRangeEnd),
+      ticket->isNumberInRange(field.secondRangeStart, field.secondRangeEnd),
+    ) {
+    | (true, _)
+    | (_, true) => true
+    | _ => false
+    };
+  };
 };
 
 module Fields = {
@@ -48,23 +63,8 @@ module Tickets = {
 };
 
 module InvalidTicketScanner = {
-  let isNumberInRange = (number, start, end_) => {
-    number >= start && number <= end_;
-  };
-
-  let isTicketInFieldRange = (ticket, field: Field.t) => {
-    switch (
-      ticket->isNumberInRange(field.firstRangeStart, field.firstRangeEnd),
-      ticket->isNumberInRange(field.secondRangeStart, field.secondRangeEnd),
-    ) {
-    | (true, _)
-    | (_, true) => true
-    | (_, _) => false
-    };
-  };
-
   let rec isValidTicket = (ticket, fields) => {
-    let result = ticket->isTicketInFieldRange(fields[0]);
+    let result = fields[0]->Field.isTicketInFieldRange(ticket);
 
     result || fields->Belt.Array.size == 1
       ? result : ticket->isValidTicket(fields->Belt.Array.sliceToEnd(1));
@@ -94,7 +94,7 @@ let nearByTickets =
 
 // part1
 let invalidTickets = fields->InvalidTicketScanner.find(nearByTickets);
-Js.log(invalidTickets->Belt.Array.reduce(0, (sum, ticket) => sum + ticket));
+Js.log(invalidTickets->Belt.Array.reduce(0, (+)));
 
 
 // part2
@@ -120,20 +120,6 @@ module PositionFinder = {
     remainPositions: array(array(string)),
     mappedPositions: Belt.Map.String.t(int),
   };
-  let isNumberInRange = (number, start, end_) => {
-    number >= start && number <= end_;
-  };
-
-  let isTicketInFieldRange = (ticket, field: Field.t) => {
-    switch (
-      ticket->isNumberInRange(field.firstRangeStart, field.firstRangeEnd),
-      ticket->isNumberInRange(field.secondRangeStart, field.secondRangeEnd),
-    ) {
-    | (true, _)
-    | (_, true) => true
-    | (_, _) => false
-    };
-  };
 
   let ablePositions = (ticketGroup, fields: Fields.t) => {
     let ticketSize = ticketGroup->Belt.Array.size;
@@ -141,7 +127,7 @@ module PositionFinder = {
     fields->Belt.Array.keepMap(field => {
       let validRangeCount =
         ticketGroup
-        ->Belt.Array.map(ticket => ticket->isTicketInFieldRange(field))
+        ->Belt.Array.map(ticket => field->Field.isTicketInFieldRange(ticket))
         ->Belt.Array.keep(x => x)
         ->Belt.Array.size;
 
@@ -149,9 +135,9 @@ module PositionFinder = {
     });
   };
 
-  let removeUpdatedPositions = (positions, removePositions) => {
+  let removeExistsPositions = (positions, existPositions) => {
     positions->Belt.Array.keep(position =>
-      !removePositions->Belt.Array.some(removePos => removePos == position)
+      !existPositions->Belt.Array.some(existPosition => existPosition == position)
     );
   };
 
@@ -166,16 +152,25 @@ module PositionFinder = {
 
     let remainPositions =
       ablePositions->Belt.Array.map(ablePosition =>
-        ablePosition->removeUpdatedPositions(existPositions)
+        ablePosition->removeExistsPositions(existPositions)
       );
 
     {remainPositions, mappedPositions: updatedPositions};
   };
 
+  let isEmpty = remainPositions => {
+    let size =
+      remainPositions
+      ->Belt.Array.keep(remainPosition => remainPosition->Belt.Array.size != 0)
+      ->Belt.Array.size;
+
+    size == 0;
+  };
+
   let rec set = result => {
     let updated = result.remainPositions->update(result.mappedPositions);
 
-    updated.remainPositions->Belt.Array.size == 0 ? updated : updated->set;
+    updated.remainPositions->isEmpty ? updated : updated->set;
   };
 
   let find = (fields, ticketsGroup) => {
@@ -183,13 +178,26 @@ module PositionFinder = {
       ticketsGroup->Belt.Array.map(ticketGroup =>
         ticketGroup->ablePositions(fields)
       );
-    let initial = {remainPositions: ablePositions, mappedPositions: Belt.Map.String.fromArray([||])}
+    let initial = {
+      remainPositions: ablePositions,
+      mappedPositions: Belt.Map.String.fromArray([||]),
+    };
+    // Js.log(ablePositions);
 
-    initial->set
+    initial->set;
+  };
+
+  let mappedPositionsToMyTicketMap = (mappedPositions, myTicket) => {
+    let initialMyTickets = Belt.Map.String.fromArray([||]);
+    mappedPositions->Belt.Map.String.reduce(
+      initialMyTickets, (mappedMyTicket, mappedPosition, index) => {
+      mappedMyTicket->Belt.Map.String.set(mappedPosition, myTicket[index])
+    });
   };
 };
 
 let data2 = Node.Fs.readFileSync("input/2020/2020.16.2.sample", `utf8);
+let data2 = Node.Fs.readFileSync("input/2020/2020.16.input", `utf8);
 let inputStrs2 = data2->Js.String2.split("\n\n");
 let fields2 =
   inputStrs2[0]->Js.String2.split("\n")->Belt.Array.map(Field.make);
@@ -206,4 +214,14 @@ let nearByTickets2 =
   ->Belt.Array.sliceToEnd(1)
   ->TicketsGroup.make;
 
-Js.log(fields2->PositionFinder.find(nearByTickets2).mappedPositions)
+let positions = fields2->PositionFinder.find(nearByTickets2);
+let myTicketsMap =
+  positions.mappedPositions
+  ->PositionFinder.mappedPositionsToMyTicketMap(myTickets2);
+
+Js.log(
+  myTicketsMap->Belt.Map.String.reduce(1, (multiply, position, ticket) =>
+    position->Js.String2.startsWith("departure")
+      ? multiply * ticket : multiply
+  ),
+);
