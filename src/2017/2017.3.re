@@ -42,19 +42,29 @@ module Stepper = {
 
 module type Generator = {
   type t;
-
   let makeValue: t => int;
   let endCondition: (int, int) => bool;
 };
 
-module Finder = (Generator: Generator) => {
+module PlusOneGenerator = {
+  open Coord;
+
+  type t = list(Coord.t);
+  let makeValue = ((_, allValues)) =>
+    switch (allValues->Belt.List.head) {
+    | Some(coord) => coord.value + 1
+    | None => 0
+    };
+
+  let endCondition = (target, value) => target == value;
+};
+
+module Finder = (G: Generator with type t := (Coord.t, list(Coord.t))) => {
   open Coord;
   open Stepper;
   open Direction;
 
-  let makeValue = (t: Generator.t) => t->Generator.makeValue;
-
-  let rec make = (target, coord, step, allCoords) => {
+  let rec find = (target, coord, step, allCoords) => {
     let nextCoord =
       switch (step.direction) {
       | RIGHT => {...coord, x: coord.x + 1}
@@ -63,56 +73,40 @@ module Finder = (Generator: Generator) => {
       | DOWN => {...coord, y: coord.y - 1}
       };
 
-    let nextValue = 
-      switch (Generator.t) {
-        | int => coord.value->Generator.makeValue
-        | list => allCoords->Generator.makeValue
-      };
+    let nextValue = G.makeValue((nextCoord, allCoords));
 
     let nextCoord = {...nextCoord, value: nextValue};
-    let nextStep = step->makeNextStep;
+    let nextStep = step->Stepper.makeNextStep;
 
     let nextAllCoords = [nextCoord, ...allCoords];
 
-    target->Generator.endCondition(nextCoord.value)
-      ? nextCoord : target->make(nextCoord, nextStep, nextAllCoords);
+    target->G.endCondition(nextCoord.value)
+      ? nextCoord : target->find(nextCoord, nextStep, nextAllCoords);
+  };
+
+  let make = target => {
+    let startCoord: Coord.t = {x: 0, y: 0, value: 1};
+    let startStep: Stepper.t = {step: 1, direction: RIGHT, remain: 1};
+
+    target->find(startCoord, startStep, [startCoord]);
   };
 
   let coordLength = coord =>
     coord.x->Js.Math.abs_int + coord.y->Js.Math.abs_int;
 };
 
-module PlusOneGenerator = {
-  type t = int;
-  let makeValue = value => value + 1;
-  let endCondition = (target, value) => target == value;
-};
-
 module PlusOneFinder = Finder(PlusOneGenerator);
 
-let startCoord: Coord.t = {x: 0, y: 0, value: 1};
-let startStep: Stepper.t = {step: 1, direction: RIGHT, remain: 1};
-
-12
-->PlusOneFinder.make(startCoord, startStep)
-->PlusOneFinder.coordLength
-->Js.log;
-23
-->PlusOneFinder.make(startCoord, startStep)
-->PlusOneFinder.coordLength
-->Js.log;
-1024
-->PlusOneFinder.make(startCoord, startStep)
-->PlusOneFinder.coordLength
-->Js.log;
-265149
-->PlusOneFinder.make(startCoord, startStep)
-->PlusOneFinder.coordLength
-->Js.log;
+12->PlusOneFinder.make->PlusOneFinder.coordLength->Js.log;
+23->PlusOneFinder.make->PlusOneFinder.coordLength->Js.log;
+1024->PlusOneFinder.make->PlusOneFinder.coordLength->Js.log;
+265149->PlusOneFinder.make->PlusOneFinder.coordLength->Js.log;
 
 module AroundGenerator = {
-  type t = list;
-  let makeValue = allValues =>
+  open Coord;
+
+  type t = list(Coord.t);
+  let makeValue = ((nextCoord, allValues)) =>
     allValues
     ->Belt.List.keep(coord => {
         switch (
@@ -133,6 +127,6 @@ module AroundGenerator = {
 
 module AroundFinder = Finder(AroundGenerator);
 
-4->AroundFinder.make(startCoord, startStep, [startCoord])->Js.log;
-363->AroundFinder.make(startCoord, startStep, [startCoord])->Js.log;
-265149->AroundFinder.make(startCoord, startStep, [startCoord])->Js.log;
+4->AroundFinder.make->Js.log;
+363->AroundFinder.make->Js.log;
+265149->AroundFinder.make->Js.log;
