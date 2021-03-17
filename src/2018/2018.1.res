@@ -10,10 +10,9 @@ let twiceSearch = ints => {
   let rec search = (ints, index, current, results) => {
     let current = current + ints->Belt.Array.getExn(mod(index, size))
 
-    switch results->Belt.List.getBy(result => result == current) {
-    | Some(_) => current
-    | None => ints->search(index + 1, current, list{current, ...results})
-    }
+    results->Belt.List.some(result => result == current)
+      ? current
+      : ints->search(index + 1, current, list{current, ...results})
   }
 
   ints->search(0, 0, list{})
