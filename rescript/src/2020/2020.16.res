@@ -175,7 +175,7 @@ module PositionFinder = {
   }
 }
 
-let data2 = Node.Fs.readFileSync("input/2020/2020.16.2.sample", #utf8)
+// let data2 = Node.Fs.readFileSync("input/2020/2020.16.2.sample", #utf8)
 let data2 = Node.Fs.readFileSync("input/2020/2020.16.input", #utf8)
 let inputStrs2 = data2->Js.String2.split("\n\n")
 let fields2 = inputStrs2[0]->Js.String2.split("\n")->Belt.Array.map(Field.make)

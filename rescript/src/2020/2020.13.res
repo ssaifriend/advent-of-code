@@ -52,6 +52,7 @@ let busIdSets = rows
   ->Js.String2.split(",")
   ->Belt.Array.map(busId => busId == "x" ? 0 : busId->Belt.Int.fromString->Belt.Option.getExn)
 )
+  /*
 ->Belt.Array.forEach(busIds => {
   let maxBusId = busIds->Belt.Set.Int.fromArray->Belt.Set.Int.maximum->Belt.Option.getExn
   let maxBusIdIndex =
@@ -81,3 +82,4 @@ let busIdSets = rows
       );
  */
 })
+  */

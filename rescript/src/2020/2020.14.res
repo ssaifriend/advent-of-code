@@ -306,7 +306,7 @@ module DockingMemoryV2 = {
     state.memory->MemoryV2.Map.reduce(Int64.zero, (sum, _, value) => sum->Int64.add(value))
 }
 
-let data2 = Node.Fs.readFileSync("input/2020/2020.14.2.sample", #utf8)
+// let data2 = Node.Fs.readFileSync("input/2020/2020.14.2.sample", #utf8)
 let data2 = Node.Fs.readFileSync("input/2020/2020.14.input", #utf8)
 let rows2 = data2->Js.String2.split("\n")
 let operations = rows2->AddressOperation.make
