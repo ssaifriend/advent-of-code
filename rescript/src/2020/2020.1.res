@@ -1,6 +1,5 @@
-let data = Node.Fs.readFileSync("input/2020/2020.1.input", #utf8)
-let years =
-  Js.String.split("\n", data)->Belt.Array.map(Belt.Int.fromString)->Belt.Array.keepMap(x => x)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.1.input")
+let years = Js.String.split("\n", data)->Belt.Array.keepMap(Belt.Int.fromString)
 
 // part1
 let currentYear = 2020

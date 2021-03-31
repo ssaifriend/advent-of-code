@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.2.input", #utf8)
+let raw = Node.Fs.readFileAsUtf8Sync("input/2020/2020.2.input")
 
 module Password = {
   type t = {
@@ -17,8 +17,7 @@ module Password = {
     let result = passwordRe->Js.Re.exec_(inputStr)
     switch result {
     | Some(r) =>
-      let captures =
-        Js.Re.captures(r)->Belt.Array.map(Js.Nullable.toOption)->Belt.Array.keepMap(x => x)
+      let captures = Js.Re.captures(r)->Belt.Array.keepMap(Js.Nullable.toOption)
       let first = captures[1]->Belt.Int.fromString->Belt.Option.getExn
       let second = captures[2]->Belt.Int.fromString->Belt.Option.getExn
       {
@@ -34,16 +33,16 @@ module Password = {
   }
 }
 
-let passwordSets = Js.String.split("\n", data)->Belt.Array.map(Password.make)
+let passwordSets = raw->Js.String2.split("\n")->Belt.Array.map(Password.make)
 
 // part1
 let isValid = ({char, min, password, max}: Password.t) => {
-  let charCount = Js.String.split("", password)->Belt.Array.keep(x => char == x)->Belt.Array.length
+  let charCount = password->Js.String2.split("")->Belt.Array.keep(x => char == x)->Belt.Array.size
 
   min <= charCount && charCount <= max
 }
 
-Js.log(passwordSets->Belt.Array.keep(isValid)->Belt.Array.size)
+passwordSets->Belt.Array.keep(isValid)->Belt.Array.size->Js.log
 
 // part2
 let isValid2 = (set: Password.t) =>
@@ -56,4 +55,4 @@ let isValid2 = (set: Password.t) =>
   | _ => false
   }
 
-Js.log(passwordSets->Belt.Array.keep(isValid2)->Belt.Array.size)
+passwordSets->Belt.Array.keep(isValid2)->Belt.Array.size->Js.log
