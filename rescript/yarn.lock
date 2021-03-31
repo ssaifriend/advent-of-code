@@ -2,7 +2,12 @@
 # yarn lockfile v1
 
 
-"bs-platform@^8.4.2":
-  "integrity" "sha512-9q7S4/LLV/a68CweN382NJdCCr/lOSsJR3oQYnmPK98ChfO/AdiA3lYQkQTp6T+U0I5Z5RypUAUprNstwDtMDQ=="
-  "resolved" "https://registry.npmjs.org/bs-platform/-/bs-platform-8.4.2.tgz"
-  "version" "8.4.2"
+"@greenlabs/garter@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@greenlabs/garter/-/garter-0.5.0.tgz#b634db1daee19b7e0b15bace195bd9f6ec271579"
+  integrity sha512-zCqepd+PaNMrwv3J2r8wPHfeTsb2hKzLPaN2BgwHruObgCxdghuUVMr+GeAlVTN8x/1LTm7qfqgAYAJSjh61NQ==
+
+bs-platform@^8.4.2:
+  version "8.4.2"
+  resolved "https://registry.npmjs.org/bs-platform/-/bs-platform-8.4.2.tgz"
+  integrity sha512-9q7S4/LLV/a68CweN382NJdCCr/lOSsJR3oQYnmPK98ChfO/AdiA3lYQkQTp6T+U0I5Z5RypUAUprNstwDtMDQ==
