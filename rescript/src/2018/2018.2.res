@@ -31,29 +31,33 @@ abbcde
 abcccd
 aabcdd
 abcdee
-ababab"->pp->countTwiceThree->multiply->Js.log
+ababab"
+->pp
+->countTwiceThree
+->multiply
+->Js.log
 
 let raw = Node.Fs.readFileAsUtf8Sync("input/2018/2018.2.input")
 raw->pp->countTwiceThree->multiply->Js.log
 
-
 let rec differentCount = (cs, arrs) => {
   let len = cs->Belt.Array.size
-  let countArrs = arrs->Belt.Array.map(arr => {
-    let cs = cs->Belt.Array.keepWithIndex((c, i) => arr[i] == c)
-    (cs, len - cs->Belt.Array.size)
-  })
-  ->Belt.Array.keep(((_, c)) => c == 1)
-  
-  switch (countArrs->Belt.Array.get(0)) {
+  let countArrs =
+    arrs
+    ->Belt.Array.map(arr => {
+      let cs = cs->Belt.Array.keepWithIndex((c, i) => arr[i] == c)
+      (cs, len - cs->Belt.Array.size)
+    })
+    ->Belt.Array.keep(((_, c)) => c == 1)
+
+  switch countArrs->Belt.Array.get(0) {
   | Some((cs, _)) => cs->Js.Array2.joinWith("")
   | None => differentCount(arrs[0], arrs->Belt.Array.sliceToEnd(1))
   }
 }
 
 // sample
-let arrs = 
-"abcde
+let arrs = "abcde
 fghij
 klmno
 pqrst
