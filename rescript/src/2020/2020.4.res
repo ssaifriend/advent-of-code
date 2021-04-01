@@ -4,17 +4,10 @@ let raw = data->Js.String2.split("\n\n")
 module type Passport = {
   type unvalidate
   type validate
-  type t<'a> = {
-    byr: int,
-    iyr: int,
-    eyr: int,
-    hgt: string,
-    hcl: string,
-    ecl: string,
-    pid: string,
-    cid: option<int>,
-  }
+  type t<'a>
 
+  let make: Belt.Map.String.t<string> => t<unvalidate>
+  let convertValidate: t<unvalidate> => t<validate>
   let validators: array<t<unvalidate> => result<unit, unit>>
 }
 
@@ -43,19 +36,8 @@ module Validator = (Passport: Passport) => {
       ->Belt.Array.map(o => (o[1], o[2]))
       ->Belt.Map.String.fromArray
 
-    let getIntExn = (m, k) => m->Belt.Map.String.getExn(k)->Belt.Int.fromString->Belt.Option.getExn
-
     try {
-      Some({
-        byr: os->getIntExn("byr"),
-        iyr: os->getIntExn("iyr"),
-        eyr: os->getIntExn("eyr"),
-        hgt: os->Belt.Map.String.getExn("hgt"),
-        hcl: os->Belt.Map.String.getExn("hcl"),
-        ecl: os->Belt.Map.String.getExn("ecl"),
-        pid: os->Belt.Map.String.getExn("pid"),
-        cid: os->Belt.Map.String.get("cid")->Belt.Option.flatMap(Belt.Int.fromString),
-      })
+      Some(os->Passport.make)
     } catch {
     | _ => None
     }
@@ -63,16 +45,7 @@ module Validator = (Passport: Passport) => {
 
   let validate = (p: t<unvalidate>): option<t<validate>> => {
     validators->Belt.Array.map(f => p->f)->Belt.Array.every(Belt.Result.isOk)
-      ? Some({
-          byr: p.byr,
-          iyr: p.iyr,
-          eyr: p.eyr,
-          hgt: p.hgt,
-          hcl: p.hcl,
-          ecl: p.ecl,
-          pid: p.pid,
-          cid: p.cid,
-        })
+      ? Some(p->Passport.convertValidate)
       : None
   }
 }
@@ -90,6 +63,30 @@ module Passport1: Passport = {
     ecl: string,
     pid: string,
     cid: option<int>,
+  }
+
+  let getIntExn = (m, k) => m->Belt.Map.String.getExn(k)->Belt.Int.fromString->Belt.Option.getExn
+
+  let make = os => {
+    byr: os->getIntExn("byr"),
+    iyr: os->getIntExn("iyr"),
+    eyr: os->getIntExn("eyr"),
+    hgt: os->Belt.Map.String.getExn("hgt"),
+    hcl: os->Belt.Map.String.getExn("hcl"),
+    ecl: os->Belt.Map.String.getExn("ecl"),
+    pid: os->Belt.Map.String.getExn("pid"),
+    cid: os->Belt.Map.String.get("cid")->Belt.Option.flatMap(Belt.Int.fromString),
+  }
+
+  let convertValidate = p => {
+    byr: p.byr,
+    iyr: p.iyr,
+    eyr: p.eyr,
+    hgt: p.hgt,
+    hcl: p.hcl,
+    ecl: p.ecl,
+    pid: p.pid,
+    cid: p.cid,
   }
 
   let isNotZeroLen = s => s->Js.String.length > 0
@@ -126,6 +123,30 @@ module Passport2: Passport = {
     ecl: string,
     pid: string,
     cid: option<int>,
+  }
+
+  let getIntExn = (m, k) => m->Belt.Map.String.getExn(k)->Belt.Int.fromString->Belt.Option.getExn
+
+  let make = os => {
+    byr: os->getIntExn("byr"),
+    iyr: os->getIntExn("iyr"),
+    eyr: os->getIntExn("eyr"),
+    hgt: os->Belt.Map.String.getExn("hgt"),
+    hcl: os->Belt.Map.String.getExn("hcl"),
+    ecl: os->Belt.Map.String.getExn("ecl"),
+    pid: os->Belt.Map.String.getExn("pid"),
+    cid: os->Belt.Map.String.get("cid")->Belt.Option.flatMap(Belt.Int.fromString),
+  }
+
+  let convertValidate = p => {
+    byr: p.byr,
+    iyr: p.iyr,
+    eyr: p.eyr,
+    hgt: p.hgt,
+    hcl: p.hcl,
+    ecl: p.ecl,
+    pid: p.pid,
+    cid: p.cid,
   }
 
   let isMinLen = (s, l) => s->Js.String.length > l
