@@ -54,10 +54,7 @@ module Validator = (Passport: Passport) => {
         hcl: os->Belt.Map.String.getExn("hcl"),
         ecl: os->Belt.Map.String.getExn("ecl"),
         pid: os->Belt.Map.String.getExn("pid"),
-        cid: switch os->Belt.Map.String.get("cid") {
-        | Some(v) => v->Belt.Int.fromString
-        | None => None
-        },
+        cid: os->Belt.Map.String.get("cid")->Belt.Option.flatMap(Belt.Int.fromString),
       })
     } catch {
     | _ => None
@@ -95,7 +92,7 @@ module Passport1: Passport = {
     cid: option<int>,
   }
 
-  let isNotZeroLen = (s) => s->Js.String.length > 0
+  let isNotZeroLen = s => s->Js.String.length > 0
 
   let validators = [
     p => p.byr > 0 ? Ok() : Error(),
