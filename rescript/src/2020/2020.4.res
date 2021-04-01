@@ -1,7 +1,11 @@
-let data = Node.Fs.readFileSync("input/2020/2020.4.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.4.input")
+let raw = data->Js.String2.split("\n\n")
 
-module Passport = {
-  type t = {
+module type PassportValidator = {
+  type unvalidate
+  type validate
+
+  type t<'a> = {
     byr: int,
     iyr: int,
     eyr: int,
@@ -12,16 +16,19 @@ module Passport = {
     cid: option<int>,
   }
 
-  exception InvalidInfo
+  let validators: array<t<unvalidate> => result<unit, unit>>
+}
 
-  let rec extract = (str, re, options) =>
+module Passport = (Validator: PassportValidator) => {
+  open Validator
+
+  let rec extract = (str, re, os) =>
     switch re->Js.Re.exec_(str) {
     | Some(r) =>
-      let captures =
-        r->Js.Re.captures->Belt.Array.map(Js.Nullable.toOption)->Belt.Array.keepMap(x => x)
+      let captures = r->Js.Re.captures->Belt.Array.keepMap(Js.Nullable.toOption)
 
-      extract(str, re, list{captures, ...options})
-    | None => options
+      str->extract(re, list{captures, ...os})
+    | None => os
     }
 
   let re = Js.Re.fromStringWithFlags(
@@ -29,139 +36,155 @@ module Passport = {
     ~flags="g",
   )
 
-  let make = inputStr => {
-    let p = {
-      byr: 0,
-      iyr: 0,
-      eyr: 0,
-      hgt: "",
-      hcl: "",
-      ecl: "",
-      pid: "",
-      cid: None,
-    }
+  let make = (inputStr): option<t<unvalidate>> => {
+    let os =
+      inputStr
+      ->extract(re, list{})
+      ->Belt.List.toArray
+      ->Belt.Array.map(o => (o[1], o[2]))
+      ->Belt.Map.String.fromArray
 
-    extract(inputStr, re, list{})->Belt.List.reduce(p, (p, option) =>
-      switch option[1] {
-      | "byr" => {
-          ...p,
-          byr: option[2]->Belt.Int.fromString->Belt.Option.getExn,
-        }
-      | "iyr" => {
-          ...p,
-          iyr: option[2]->Belt.Int.fromString->Belt.Option.getExn,
-        }
-      | "eyr" => {
-          ...p,
-          eyr: option[2]->Belt.Int.fromString->Belt.Option.getExn,
-        }
-      | "hgt" => {...p, hgt: option[2]}
-      | "hcl" => {...p, hcl: option[2]}
-      | "ecl" => {...p, ecl: option[2]}
-      | "pid" => {...p, pid: option[2]}
-      | "cid" => {...p, cid: option[2]->Belt.Int.fromString}
-      | _ => raise(InvalidInfo)
-      }
-    )
+    let getIntExn = (m, k) => m->Belt.Map.String.getExn(k)->Belt.Int.fromString->Belt.Option.getExn
+
+    try {
+      Some({
+        byr: os->getIntExn("byr"),
+        iyr: os->getIntExn("iyr"),
+        eyr: os->getIntExn("eyr"),
+        hgt: os->Belt.Map.String.getExn("hgt"),
+        hcl: os->Belt.Map.String.getExn("hcl"),
+        ecl: os->Belt.Map.String.getExn("ecl"),
+        pid: os->Belt.Map.String.getExn("pid"),
+        cid: switch os->Belt.Map.String.get("cid") {
+        | Some(v) => v->Belt.Int.fromString
+        | None => None
+        },
+      })
+    } catch {
+    | _ => None
+    }
+  }
+
+  let validate = (p: t<unvalidate>): option<t<validate>> => {
+    Validator.validators->Belt.Array.map(f => p->f)->Belt.Array.every(Belt.Result.isOk)
+      ? Some({
+          byr: p.byr,
+          iyr: p.iyr,
+          eyr: p.eyr,
+          hgt: p.hgt,
+          hcl: p.hcl,
+          ecl: p.ecl,
+          pid: p.pid,
+          cid: p.cid,
+        })
+      : None
   }
 }
-
-module PassportValidator = {
-  let isValid = (passport: Passport.t, validators) =>
-    validators->Belt.List.reduce(true, (isValid, func) =>
-      isValid && func(passport)->Belt.Result.isOk
-    )
-}
-
-let passports = Js.String.split("\n\n", data)->Belt.Array.map(Passport.make)
 
 // part1
+module PassportValidator1: PassportValidator = {
+  type unvalidate
+  type validate
+  type t<'a> = {
+    byr: int,
+    iyr: int,
+    eyr: int,
+    hgt: string,
+    hcl: string,
+    ecl: string,
+    pid: string,
+    cid: option<int>,
+  }
 
-let validFunctions = list{
-  (passport: Passport.t) => passport.byr > 0 ? Ok(true) : Error(false),
-  (passport: Passport.t) => passport.iyr > 0 ? Ok(true) : Error(false),
-  (passport: Passport.t) => passport.eyr > 0 ? Ok(true) : Error(false),
-  (passport: Passport.t) => passport.hgt->Js.String.length > 0 ? Ok(true) : Error(false),
-  (passport: Passport.t) => passport.hcl->Js.String.length > 0 ? Ok(true) : Error(false),
-  (passport: Passport.t) => passport.ecl->Js.String.length > 0 ? Ok(true) : Error(false),
-  (passport: Passport.t) => passport.pid->Js.String.length > 0 ? Ok(true) : Error(false),
-  // cid는 없어도 됨
+  let isNotZeroLen = (s) => s->Js.String.length > 0
+
+  let validators = [
+    p => p.byr > 0 ? Ok() : Error(),
+    p => p.iyr > 0 ? Ok() : Error(),
+    p => p.eyr > 0 ? Ok() : Error(),
+    p => p.hgt->isNotZeroLen ? Ok() : Error(),
+    p => p.hcl->isNotZeroLen ? Ok() : Error(),
+    p => p.ecl->isNotZeroLen ? Ok() : Error(),
+    p => p.pid->isNotZeroLen ? Ok() : Error(),
+    // cid는 없어도 됨
+  ]
 }
 
-let validPassportCount =
-  passports
-  ->Belt.Array.map(passport => passport->PassportValidator.isValid(validFunctions))
-  ->Belt.Array.keep(isValid => isValid)
-  ->Belt.Array.length
-
-Js.log(validPassportCount)
+module Passport1 = Passport(PassportValidator1)
+raw
+->Belt.Array.keepMap(Passport1.make)
+->Belt.Array.keepMap(Passport1.validate)
+->Belt.Array.size
+->Js.log
 
 // part2
-let isValidByr = (passport: Passport.t) =>
-  passport.byr >= 1920 && passport.byr <= 2002 ? Ok(true) : Error(false)
-let isValidIyr = (passport: Passport.t) =>
-  passport.iyr >= 2010 && passport.iyr <= 2020 ? Ok(true) : Error(false)
-let isValidEyr = (passport: Passport.t) =>
-  passport.eyr >= 2020 && passport.eyr <= 2030 ? Ok(true) : Error(false)
-let isValidHgt = (passport: Passport.t) => {
-  let isValidValue = height => {
-    let heightLength = passport.hgt->Js.String.length
-    let heightUnit =
-      String.make(1, String.get(height, heightLength - 2)) ++
-      String.make(1, String.get(height, heightLength - 1))
+module PassportValidator2: PassportValidator = {
+  type unvalidate
+  type validate
+  type t<'a> = {
+    byr: int,
+    iyr: int,
+    eyr: int,
+    hgt: string,
+    hcl: string,
+    ecl: string,
+    pid: string,
+    cid: option<int>,
+  }
 
-    switch heightUnit {
-    | "cm" =>
-      let h = height->Belt.Int.fromString->Belt.Option.getExn
-      h >= 150 && h <= 193
-    | "in" =>
-      let h = height->Belt.Int.fromString->Belt.Option.getExn
-      h >= 59 && h <= 76
-    | _ => false
+  let isMinLen = (s, l) => s->Js.String.length > l
+  let isEqLen = (s, l) => s->Js.String.length == l
+
+  let isValidByr = p => p.byr >= 1920 && p.byr <= 2002 ? Ok() : Error()
+  let isValidIyr = p => p.iyr >= 2010 && p.iyr <= 2020 ? Ok() : Error()
+  let isValidEyr = p => p.eyr >= 2020 && p.eyr <= 2030 ? Ok() : Error()
+  let isValidHgt = p => {
+    let isValidValue = height => {
+      let heightLength = p.hgt->Js.String.length
+      let heightUnit = height->Js.String2.substring(~from=heightLength - 2, ~to_=heightLength)
+      let convertInt = v => v->Belt.Int.fromString->Belt.Option.getExn
+      let between = (v, min, max) => v >= min && v <= max
+
+      switch heightUnit {
+      | "cm" => height->convertInt->between(150, 193)
+      | "in" => height->convertInt->between(59, 76)
+      | _ => false
+      }
     }
+
+    p.hgt->isMinLen(1) && p.hgt->isValidValue ? Ok() : Error()
   }
 
-  passport.hgt->Js.String.length >= 2 && passport.hgt->isValidValue ? Ok(true) : Error(false)
-}
-let isValidHcl = (passport: Passport.t) => {
-  let isStartAtSharp = hcl => String.get(hcl, 0) == '#'
-  let isValidColor = colorCode => {
+  let isValidHcl = p => {
+    let isStartAtSharp = hcl => String.get(hcl, 0) == '#'
     let re = Js.Re.fromString("[0-9a-f]{6}")
+    let isValidColor = colorCode => colorCode->isEqLen(6) && re->Js.Re.test_(colorCode)
 
-    colorCode->Js.String.length == 6 && re->Js.Re.test_(colorCode)
+    p.hcl->isMinLen(0) && p.hcl->isStartAtSharp && p.hcl->Js.String.substr(~from=1)->isValidColor
+      ? Ok()
+      : Error()
   }
 
-  passport.hcl->Js.String.length > 0 &&
-    (passport.hcl->isStartAtSharp &&
-    passport.hcl->Js.String.substr(~from=1)->isValidColor)
-    ? Ok(true)
-    : Error(false)
-}
-let isValidEcl = (passport: Passport.t) => {
-  let validEclSet = Belt.Set.String.fromArray(["amb", "blu", "brn", "gry", "grn", "hzl", "oth"])
+  let validEcl = ["amb", "blu", "brn", "gry", "grn", "hzl", "oth"]
+  let isValidEcl = p => validEcl->Belt.Array.some(ecl => ecl == p.ecl) ? Ok() : Error()
 
-  validEclSet->Belt.Set.String.has(passport.ecl) ? Ok(true) : Error(false)
-}
-let isValidPid = (passport: Passport.t) => {
   let re = Js.Re.fromString("[0-9]{9}")
+  let isValidPid = p => p.pid->isEqLen(9) && re->Js.Re.test_(p.pid) ? Ok() : Error()
 
-  passport.pid->Js.String.length == 9 && Js.Re.test_(re, passport.pid) ? Ok(true) : Error(false)
+  let validators = [
+    isValidByr,
+    isValidIyr,
+    isValidEyr,
+    isValidHgt,
+    isValidHcl,
+    isValidEcl,
+    isValidPid,
+  ]
 }
 
-let validFunctions2 = list{
-  isValidByr,
-  isValidIyr,
-  isValidEyr,
-  isValidHgt,
-  isValidHcl,
-  isValidEcl,
-  isValidPid,
-}
-
-let validPassportCount2 =
-  passports
-  ->Belt.Array.map(passport => passport->PassportValidator.isValid(validFunctions2))
-  ->Belt.Array.keep(isValid => isValid)
-  ->Belt.Array.length
-
-Js.log(validPassportCount2)
+module Passport2 = Passport(PassportValidator2)
+raw
+->Belt.Array.keepMap(Passport2.make)
+->Belt.Array.keepMap(Passport2.validate)
+->Belt.Array.size
+->Js.log
