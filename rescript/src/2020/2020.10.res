@@ -1,9 +1,5 @@
-let data = Node.Fs.readFileSync("input/2020/2020.10.input", #utf8)
-let jolts =
-  Js.String.split("\n", data)
-  ->Belt.Array.map(Belt.Int.fromString)
-  ->Belt.Array.keepMap(x => x)
-  ->Belt.Set.Int.fromArray
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.10.input")
+let jolts = data->Js.String2.split("\n")->Util.Int.fromStringsExn->Belt.Set.Int.fromArray
 
 // part1
 type summary = {
@@ -30,8 +26,8 @@ let result =
     }
   )
 
-Js.log(result)
-Js.log(result.j1 * result.j3)
+result->Js.log
+(result.j1 * result.j3)->Js.log
 
 // part2
 let fullJolts = jolts->Belt.Set.Int.add(0)->Belt.Set.Int.add(maxJolts + 3)->Belt.Set.Int.toList // 시작은 0 // 마지막에 항상 +3?..

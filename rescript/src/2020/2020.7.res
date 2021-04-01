@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.7.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.7.input")
 
 module Bag = {
   type rec t = {
@@ -8,16 +8,6 @@ module Bag = {
   }
 
   // from 2020.4
-  let rec extract = (str, re, options) =>
-    switch re->Js.Re.exec_(str) {
-    | Some(r) =>
-      let captures =
-        r->Js.Re.captures->Belt.Array.map(Js.Nullable.toOption)->Belt.Array.keepMap(x => x)
-
-      extract(str, re, list{captures, ...options})
-    | None => options
-    }
-
   let make = inputStr => {
     let str = inputStr->Js.String2.split(" contain ")
 
@@ -27,18 +17,20 @@ module Bag = {
     let result = parentRe->Js.Re.exec_(str[0])
     let parentBag = switch result {
     | Some(r) =>
-      let captures =
-        Js.Re.captures(r)->Belt.Array.map(Js.Nullable.toOption)->Belt.Array.keepMap(x => x)
+      let captures = Js.Re.captures(r)->Belt.Array.keepMap(Js.Nullable.toOption)
       {...bag, name: captures[1]}
     | None => raise(Not_found)
     }
 
     let containRe = Js.Re.fromStringWithFlags("([0-9]+) ([a-zA-z ]+) (bags|bag)", ~flags="g")
-    let contains = extract(str[1], containRe, list{})->Belt.List.map(bag => {
-      name: bag[2],
-      count: bag[1]->Belt.Int.fromString->Belt.Option.getExn,
-      contains: list{},
-    })
+    let contains =
+      str[1]
+      ->Util.Re.extract(containRe, list{})
+      ->Belt.List.map(bag => {
+        name: bag[2],
+        count: bag[1]->Util.Int.fromStringExn,
+        contains: list{},
+      })
 
     {...parentBag, contains: contains}
   }
@@ -58,13 +50,10 @@ let rec findContainBags = (contains, allBags, findBagName) =>
   )
 
 let findBagName = "shiny gold"
-let matchBagCount =
-  bags
-  ->Belt.Array.map(bag => bag.contains->findContainBags(bags, findBagName))
-  ->Belt.Array.keep(x => x)
-  ->Belt.Array.size
-
-Js.log(matchBagCount)
+bags
+->Belt.Array.keep(bag => bag.contains->findContainBags(bags, findBagName))
+->Belt.Array.size
+->Js.log
 
 // part2
 // let findBagName = "shiny gold"; // part1 에서 정의
@@ -79,4 +68,4 @@ let rec summerizer = (allBags, bagName) =>
 
 let allBagCount = bags->summerizer(findBagName) - 1 // 자기 자신이 포함되어 있기에 빼야 함
 
-Js.log(allBagCount)
+allBagCount->Js.log

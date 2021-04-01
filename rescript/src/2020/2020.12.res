@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.12.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.12.input")
 let rows = data->Js.String2.split("\n")
 
 module Action = {
@@ -41,7 +41,7 @@ module Operation = {
 
   let make = inputStr => {
     action: inputStr->Js.String2.get(0)->Action.make,
-    value: inputStr->Js.String2.sliceToEnd(~from=1)->Belt.Int.fromString->Belt.Option.getExn,
+    value: inputStr->Js.String2.sliceToEnd(~from=1)->Util.Int.fromStringExn,
   }
 }
 

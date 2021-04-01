@@ -1,5 +1,5 @@
-let data = Node.Fs.readFileSync("input/2020/2020.9.input", #utf8)
-let numbers = data->Js.String2.split("\n")->Belt.Array.keepMap(Belt.Float.fromString)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.9.input")
+let numbers = data->Js.String2.split("\n")->Util.Float.fromStringsExn
 
 // part1
 // form 2020.1

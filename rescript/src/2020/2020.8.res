@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.8.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.8.input")
 
 module Op = {
   type t =
@@ -11,11 +11,9 @@ module Op = {
     let result = re->Js.Re.exec_(inputStr)
     switch result {
     | Some(r) =>
-      let captures =
-        Js.Re.captures(r)->Belt.Array.map(Js.Nullable.toOption)->Belt.Array.keepMap(x => x)
+      let captures = Js.Re.captures(r)->Belt.Array.keepMap(Js.Nullable.toOption)
 
-      let value =
-        (captures[2] == "-" ? -1 : 1) * captures[3]->Belt.Int.fromString->Belt.Option.getExn
+      let value = (captures[2] == "-" ? -1 : 1) * captures[3]->Util.Int.fromStringExn
 
       switch captures[1] {
       | "acc" => Acc(value)
@@ -78,7 +76,7 @@ let rec walk = (codes: array<Op.t>, s): summary => {
   }
 }
 
-Js.log((codes->walk(initialState)).sum)
+(codes->walk(initialState)).sum->Js.log
 
 // part2
 
@@ -107,4 +105,4 @@ let rec findNotInfSummary = (codes, index) => {
   }
 }
 
-Js.log(codes->findNotInfSummary(codes->Belt.Array.size - 1))
+codes->findNotInfSummary(codes->Belt.Array.size - 1)->Js.log

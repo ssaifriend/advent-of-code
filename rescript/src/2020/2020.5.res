@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.5.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.5.input")
 
 module Boarding = {
   type t = {
@@ -46,23 +46,24 @@ module BinaryBoarding = {
 }
 
 // part1
-let seatIds = data
-->Boarding.make
-->Belt.Array.map(boarding => {
-  let seatRow =
-    boarding.rows
-    ->BinaryBoarding.reducer({low: 0, high: 127}, ~upperComp=c => c == "B")
-    ->BinaryBoarding.getLow
-  let seatCol =
-    boarding.cols
-    ->BinaryBoarding.reducer({low: 0, high: 7}, ~upperComp=c => c == "R")
-    ->BinaryBoarding.getLow
+let seatIds =
+  data
+  ->Boarding.make
+  ->Belt.Array.map(boarding => {
+    let seatRow =
+      boarding.rows
+      ->BinaryBoarding.reducer({low: 0, high: 127}, ~upperComp=c => c == "B")
+      ->BinaryBoarding.getLow
+    let seatCol =
+      boarding.cols
+      ->BinaryBoarding.reducer({low: 0, high: 7}, ~upperComp=c => c == "R")
+      ->BinaryBoarding.getLow
 
-  seatRow * 8 + seatCol
-})
-->Belt.Set.Int.fromArray
+    seatRow * 8 + seatCol
+  })
+  ->Belt.Set.Int.fromArray
 
-Js.log(seatIds->Belt.Set.Int.maximum)
+seatIds->Belt.Set.Int.maximum->Js.log
 
 // part2
 let seatLength = seatIds->Belt.Set.Int.size
@@ -71,9 +72,9 @@ let rec findSeatId = (seatIds, currentSeatId) =>
   switch (seatIds->Belt.List.head, seatIds->Belt.List.get(1)) {
   | (None, _)
   | (Some(_), None) => currentSeatId
-  | (Some(seatId), Some(nextSeatId)) when seatId + 1 != nextSeatId => seatId + 1
+  | (Some(seatId), Some(nextSeatId)) if seatId + 1 != nextSeatId => seatId + 1
   | _ => seatIds->Belt.List.tailExn->findSeatId(currentSeatId)
   }
 let seatId = seatIdList->findSeatId(seatIdList->Belt.List.headExn)
 
-Js.log(seatId)
+seatId->Js.log

@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.11.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.11.input")
 let rows = data->Js.String2.split("\n")
 
 module Seat = {
@@ -52,7 +52,8 @@ module Coord = {
   }
 }
 
-let seatsMap = rows->Belt.Array.map(row => row->Js.String2.split("")->Belt.Array.map(Seat.make))
+let parse = r => r->Js.String2.split("")
+let seatsMap = rows->Belt.Array.map(row => row->parse->Belt.Array.map(Seat.make))
 
 // part1
 module type MakeNextState = {
@@ -62,7 +63,7 @@ module type MakeNextState = {
 module NextState = (Item: MakeNextState) => {
   let occupiedCount = (seatsMap, positions: list<Coord.t>) =>
     positions
-    ->Belt.List.map(position =>
+    ->Belt.List.keep(position =>
       switch seatsMap->Belt.Array.get(position.row) {
       | None => false
       | Some(seats) =>
@@ -72,14 +73,12 @@ module NextState = (Item: MakeNextState) => {
         }
       }
     )
-    ->Belt.List.keep(x => x)
     ->Belt.List.size
 
   let nextWithIndex = (seatsMap, coord: Coord.t) => {
     let positions = Coord.makeAroundCoords(coord)
-    let occupiedCount = seatsMap->occupiedCount(positions)
 
-    Item.next(occupiedCount)
+    seatsMap->occupiedCount(positions)->Item.next
   }
 }
 
@@ -140,20 +139,19 @@ module SeatsMap = {
 }
 
 let printMap = seatsMap => {
+  open Seat
   seatsMap->Belt.Array.forEach(seats =>
-    Js.log(
-      seats
-      ->Belt.Array.map(seat =>
-        switch seat {
-        | Seat.Occupied => "#"
-        | Empty => "L"
-        | Floor => "."
-        }
-      )
-      ->Js.Array2.joinWith(""),
+    seats
+    ->Belt.Array.map(seat =>
+      switch seat {
+      | Occupied => "#"
+      | Empty => "L"
+      | Floor => "."
+      }
     )
+    ->Js.Array2.joinWith("")
+    ->Js.log
   )
-  Js.log("")
 }
 
 module SeatChanger = {
@@ -189,11 +187,10 @@ let occupiedCounter = seatsMap =>
     sum + row->Belt.Array.keep(seat => seat == Seat.Occupied)->Belt.Array.size
   )
 
-let noChangeSeatsMap =
-  seatsMap->SeatChanger.findNoChangeState(EmptyState.nextWithIndex, OccupiedState.nextWithIndex)
-let occupiedCount = noChangeSeatsMap->occupiedCounter
-
-Js.log(occupiedCount)
+seatsMap
+->SeatChanger.findNoChangeState(EmptyState.nextWithIndex, OccupiedState.nextWithIndex)
+->occupiedCounter
+->Js.log
 
 // part2
 module NextState2 = (Item: MakeNextState) => {
@@ -203,7 +200,7 @@ module NextState2 = (Item: MakeNextState) => {
     | GoToNextSeat
     | NotOccupied
 
-  let rec getOccupied = (seatsMap, direction: Coord.t, coord: Coord.t) => {
+  let rec isOccupied = (seatsMap, direction: Coord.t, coord: Coord.t) => {
     let result = switch seatsMap->Belt.Array.get(coord.row) {
     | None => IndexOverflow
     | Some(seats) =>
@@ -218,7 +215,7 @@ module NextState2 = (Item: MakeNextState) => {
     switch result {
     | IsOccupied => true
     | GoToNextSeat =>
-      seatsMap->getOccupied(
+      seatsMap->isOccupied(
         direction,
         {row: coord.row + direction.row, col: coord.col + direction.col},
       )
@@ -228,20 +225,18 @@ module NextState2 = (Item: MakeNextState) => {
 
   let occupiedCount = (seatsMap, directions: list<Coord.t>, coord: Coord.t) =>
     directions
-    ->Belt.List.map(direction =>
-      seatsMap->getOccupied(
+    ->Belt.List.keep(direction =>
+      seatsMap->isOccupied(
         direction,
         {row: coord.row + direction.row, col: coord.col + direction.col},
       )
     )
-    ->Belt.List.keep(x => x)
     ->Belt.List.size
 
   let nextWithIndex = (seatsMap, coord: Coord.t) => {
     let directions = Coord.makeDirections()
-    let occupiedCount = seatsMap->occupiedCount(directions, coord)
 
-    Item.next(occupiedCount)
+    seatsMap->occupiedCount(directions, coord)->Item.next
   }
 }
 
@@ -252,8 +247,7 @@ module MakeOccupiedNextState2 = {
 }
 module OccupiedState2 = NextState2(MakeOccupiedNextState2)
 
-let noChangeSeatsMap =
-  seatsMap->SeatChanger.findNoChangeState(EmptyState2.nextWithIndex, OccupiedState2.nextWithIndex)
-let occupiedCount = noChangeSeatsMap->occupiedCounter
-
-Js.log(occupiedCount)
+seatsMap
+->SeatChanger.findNoChangeState(EmptyState2.nextWithIndex, OccupiedState2.nextWithIndex)
+->occupiedCounter
+->Js.log

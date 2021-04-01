@@ -17,10 +17,10 @@ module Field = {
       let captures = Js.Re.captures(r)->Belt.Array.keepMap(Js.Nullable.toOption)
       {
         name: captures[1],
-        firstRangeStart: captures[2]->Belt.Int.fromString->Belt.Option.getExn,
-        firstRangeEnd: captures[3]->Belt.Int.fromString->Belt.Option.getExn,
-        secondRangeStart: captures[4]->Belt.Int.fromString->Belt.Option.getExn,
-        secondRangeEnd: captures[5]->Belt.Int.fromString->Belt.Option.getExn,
+        firstRangeStart: captures[2]->Util.Int.fromStringExn,
+        firstRangeEnd: captures[3]->Util.Int.fromStringExn,
+        secondRangeStart: captures[4]->Util.Int.fromStringExn,
+        secondRangeEnd: captures[5]->Util.Int.fromStringExn,
       }
     | None => raise(InvalidField)
     }
@@ -48,9 +48,7 @@ module Tickets = {
 
   let make = inputStrs =>
     inputStrs
-    ->Belt.Array.map(inputStr =>
-      inputStr->Js.String2.split(",")->Belt.Array.keepMap(Belt.Int.fromString)
-    )
+    ->Belt.Array.map(inputStr => inputStr->Js.String2.split(",")->Util.Int.fromStringsExn)
     ->Belt.Array.concatMany
 }
 
@@ -76,8 +74,7 @@ let myTickets = inputStrs[1]->Js.String2.split("\n")->Belt.Array.sliceToEnd(1)->
 let nearByTickets = inputStrs[2]->Js.String2.split("\n")->Belt.Array.sliceToEnd(1)->Tickets.make
 
 // part1
-let invalidTickets = fields->InvalidTicketScanner.find(nearByTickets)
-Js.log(invalidTickets->Belt.Array.reduce(0, \"+"))
+fields->InvalidTicketScanner.find(nearByTickets)->Belt.Array.reduce(0, \"+")->Js.log
 
 // part2
 module TicketsGroup = {
@@ -86,7 +83,7 @@ module TicketsGroup = {
   let make = inputStrs => {
     let rows =
       inputStrs->Belt.Array.map(inputStr =>
-        inputStr->Js.String2.split(",")->Belt.Array.keepMap(Belt.Int.fromString)
+        inputStr->Js.String2.split(",")->Util.Int.fromStringsExn
       )
     let groupSize = rows[0]->Belt.Array.size
 
@@ -108,8 +105,7 @@ module PositionFinder = {
     fields->Belt.Array.keepMap(field => {
       let validRangeCount =
         ticketGroup
-        ->Belt.Array.map(ticket => field->Field.isTicketInFieldRange(ticket))
-        ->Belt.Array.keep(x => x)
+        ->Belt.Array.keep(ticket => field->Field.isTicketInFieldRange(ticket))
         ->Belt.Array.size
 
       validRangeCount == ticketSize ? Some(field.name) : None
@@ -175,8 +171,8 @@ module PositionFinder = {
   }
 }
 
-// let data2 = Node.Fs.readFileSync("input/2020/2020.16.2.sample", #utf8)
-let data2 = Node.Fs.readFileSync("input/2020/2020.16.input", #utf8)
+// let data2 = Node.Fs.readFileAsUtf8Sync("input/2020/2020.16.2.sample")
+let data2 = Node.Fs.readFileAsUtf8Sync("input/2020/2020.16.input")
 let inputStrs2 = data2->Js.String2.split("\n\n")
 let fields2 = inputStrs2[0]->Js.String2.split("\n")->Belt.Array.map(Field.make)
 
@@ -189,8 +185,8 @@ let positions = fields2->PositionFinder.find(nearByTickets2)
 let myTicketsMap =
   positions.mappedPositions->PositionFinder.mappedPositionsToMyTicketMap(myTickets2)
 
-Js.log(
-  myTicketsMap->Belt.Map.String.reduce(1, (multiply, position, ticket) =>
-    position->Js.String2.startsWith("departure") ? multiply * ticket : multiply
-  ),
+myTicketsMap
+->Belt.Map.String.reduce(1, (multiply, position, ticket) =>
+  position->Js.String2.startsWith("departure") ? multiply * ticket : multiply
 )
+->Js.log

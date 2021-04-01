@@ -1,4 +1,4 @@
-let data = Node.Fs.readFileSync("input/2020/2020.6.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.6.input")
 
 let cases =
   data
@@ -49,14 +49,11 @@ module Answers = Belt.Set.String
 
 // part1, part2 통합
 let rec findPersons = (persons, compareSet, compareFunc) => {
-  let comparedSet = switch persons->Belt.List.head {
-  | Some(person) => compareSet->compareFunc(person->Answers.fromArray)
-  | None => compareSet
-  }
-
-  switch persons->Belt.List.tail {
-  | Some(persons) => persons->findPersons(comparedSet, compareFunc)
-  | None => comparedSet
+  switch persons {
+  | list{person, ...tail} =>
+    let comparedSet = compareSet->compareFunc(person->Answers.fromArray)
+    tail->findPersons(comparedSet, compareFunc)
+  | _ => compareSet
   }
 }
 
@@ -66,12 +63,7 @@ let getPersonCount = (case, compareFunc) => {
   persons->findPersons(initial, compareFunc)->Answers.size
 }
 
-let someYesCount =
-  cases->Belt.Array.map(case => case->getPersonCount(Answers.union))->Belt.Array.reduce(0, \"+")
+let run = (cs, f) => cs->Belt.Array.map(case => case->getPersonCount(f))->Belt.Array.reduce(0, \"+")
 
-Js.log(someYesCount)
-
-let allYesCount =
-  cases->Belt.Array.map(case => case->getPersonCount(Answers.intersect))->Belt.Array.reduce(0, \"+")
-
-Js.log(allYesCount)
+cases->run(Answers.union)->Js.log
+cases->run(Answers.intersect)->Js.log

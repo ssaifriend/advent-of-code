@@ -173,7 +173,7 @@ module DockingMemory = {
     state.memory->Memory.Map.reduce(Int64.zero, (sum, _, value) => sum->Int64.add(value))
 }
 
-let data = Node.Fs.readFileSync("input/2020/2020.14.sample", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.14.sample")
 let rows = data->Js.String2.split("\n")
 let operations = rows->ValueOperation.make
 let state = operations->DockingMemory.start
@@ -181,7 +181,7 @@ let state = operations->DockingMemory.start
 
 let sum = state->DockingMemory.memorySum
 
-Js.log(sum->Int64.to_string)
+sum->Int64.to_string->Js.log
 
 // part2
 module AddressMaskConverter = {
@@ -306,8 +306,8 @@ module DockingMemoryV2 = {
     state.memory->MemoryV2.Map.reduce(Int64.zero, (sum, _, value) => sum->Int64.add(value))
 }
 
-// let data2 = Node.Fs.readFileSync("input/2020/2020.14.2.sample", #utf8)
-let data2 = Node.Fs.readFileSync("input/2020/2020.14.input", #utf8)
+// let data2 = Node.Fs.readFileAsUtf8Sync("input/2020/2020.14.2.sample")
+let data2 = Node.Fs.readFileAsUtf8Sync("input/2020/2020.14.input")
 let rows2 = data2->Js.String2.split("\n")
 let operations = rows2->AddressOperation.make
 let state = operations->DockingMemoryV2.start
@@ -315,4 +315,4 @@ let state = operations->DockingMemoryV2.start
 
 let sum = state->DockingMemoryV2.memorySum
 
-Js.log(sum->Int64.to_string)
+sum->Int64.to_string->Js.log

@@ -1,7 +1,7 @@
-let data = Node.Fs.readFileSync("input/2020/2020.13.input", #utf8)
+let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.13.input")
 let rows = data->Js.String2.split("\n")
 
-let time = rows[0]->Belt.Int.fromString->Belt.Option.getExn
+let time = rows[0]->Util.Int.fromStringExn
 let busIds = rows[1]->Js.String2.split(",")
 
 // part1
@@ -20,8 +20,7 @@ let rec findDepartTime = (busIds, time) => {
   }
 }
 
-let departBusIds =
-  busIds->Belt.Array.keep(busId => busId != "x")->Belt.Array.keepMap(Belt.Int.fromString)
+let departBusIds = busIds->Belt.Array.keep(busId => busId != "x")->Util.Int.fromStringsExn
 let (busId, departTime) = departBusIds->findDepartTime(time)
 Js.log(busId * (departTime - time))
 
@@ -45,14 +44,15 @@ let rec getContentTime = (busIds, startTime, ~maxBusId) => {
     : busIds->getContentTime(Int64.add(startTime, maxBusId), ~maxBusId)
 }
 
-let busIdSets = rows
-->Belt.Array.sliceToEnd(1)
-->Belt.Array.map(row =>
-  row
-  ->Js.String2.split(",")
-  ->Belt.Array.map(busId => busId == "x" ? 0 : busId->Belt.Int.fromString->Belt.Option.getExn)
-)
-  /*
+let busIdSets =
+  rows
+  ->Belt.Array.sliceToEnd(1)
+  ->Belt.Array.map(row =>
+    row
+    ->Js.String2.split(",")
+    ->Belt.Array.map(busId => busId == "x" ? 0 : busId->Belt.Int.fromString->Belt.Option.getExn)
+  )
+/*
 ->Belt.Array.forEach(busIds => {
   let maxBusId = busIds->Belt.Set.Int.fromArray->Belt.Set.Int.maximum->Belt.Option.getExn
   let maxBusIdIndex =
@@ -82,4 +82,4 @@ let busIdSets = rows
       );
  */
 })
-  */
+ */

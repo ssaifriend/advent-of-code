@@ -14,15 +14,6 @@ module type Passport = {
 module Validator = (Passport: Passport) => {
   open Passport
 
-  let rec extract = (str, re, os) =>
-    switch re->Js.Re.exec_(str) {
-    | Some(r) =>
-      let captures = r->Js.Re.captures->Belt.Array.keepMap(Js.Nullable.toOption)
-
-      str->extract(re, list{captures, ...os})
-    | None => os
-    }
-
   let re = Js.Re.fromStringWithFlags(
     "(byr|iyr|eyr|hgt|hcl|ecl|pid|cid):([a-zA-Z0-9#]+)",
     ~flags="g",
@@ -31,7 +22,7 @@ module Validator = (Passport: Passport) => {
   let make = (inputStr): option<t<unvalidate>> => {
     let os =
       inputStr
-      ->extract(re, list{})
+      ->Util.Re.extract(re, list{})
       ->Belt.List.toArray
       ->Belt.Array.map(o => (o[1], o[2]))
       ->Belt.Map.String.fromArray

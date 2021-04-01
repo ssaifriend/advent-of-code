@@ -26,41 +26,32 @@ module MemoryGame = {
   let getNumber = (state, ~finalTurn) => state->next(~finalTurn)
 
   let make = initialNumbers => {
-    let speakMap = Map.fromArray([])
     let initialSpeakMapMap =
-      initialNumbers->Belt.List.reduceWithIndex(speakMap, (map, number, index) =>
-        map->Map.set(number, index + 1)
-      )
+      initialNumbers->Belt.Array.mapWithIndex((index, number) => (number, index + 1))->Map.fromArray
 
     {
       speakMap: initialSpeakMapMap,
-      turn: initialNumbers->Belt.List.size,
-      lastSpeakNumber: initialNumbers
-      ->Belt.List.toArray
-      ->Belt.Array.getExn(initialNumbers->Belt.List.size - 1),
+      turn: initialNumbers->Belt.Array.size,
+      lastSpeakNumber: initialNumbers->Belt.Array.getExn(initialNumbers->Belt.Array.size - 1),
     }
   }
 }
 
 let finalTurn = 2020
 let finalTurn2 = 30000000
-let testCases = list{
+let testCases = [
   //part1, part2
-  list{0, 3, 6}, // 436, 175594
-  list{1, 3, 2}, // 1, 2578
-  list{2, 1, 3}, // 10, 3544142
-  list{1, 2, 3}, // 27, 261214
-  list{2, 3, 1}, // 78, 6895259
-  list{3, 2, 1}, // 438, 18
-  list{3, 1, 2}, // 1836, 362
-  list{13, 0, 10, 12, 1, 5, 8}, // find!
-}
+  [0, 3, 6], // 436, 175594
+  [1, 3, 2], // 1, 2578
+  [2, 1, 3], // 10, 3544142
+  [1, 2, 3], // 27, 261214
+  [2, 3, 1], // 78, 6895259
+  [3, 2, 1], // 438, 18
+  [3, 1, 2], // 1836, 362
+  [13, 0, 10, 12, 1, 5, 8], // find!
+]
 
-let _ =
-  testCases->Belt.List.map(case =>
-    Js.log((case->MemoryGame.make->MemoryGame.getNumber(~finalTurn)).lastSpeakNumber)
-  )
-let _ =
-  testCases->Belt.List.map(case =>
-    Js.log((case->MemoryGame.make->MemoryGame.getNumber(~finalTurn=finalTurn2)).lastSpeakNumber)
-  )
+let fn = (cs, fn) =>
+  (cs->MemoryGame.make->MemoryGame.getNumber(~finalTurn=fn)).lastSpeakNumber->Js.log
+testCases->Belt.Array.forEach(case => case->fn(finalTurn))
+testCases->Belt.Array.forEach(case => case->fn(finalTurn2))
