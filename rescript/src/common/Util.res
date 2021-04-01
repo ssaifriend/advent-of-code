@@ -17,3 +17,9 @@ module Re = {
       str->extract(re, list{captures, ...options})
     }
 }
+
+module Array = {
+  module Int = {
+    let sum = a => a->Belt.Array.reduce(0, \"+")
+  }
+}

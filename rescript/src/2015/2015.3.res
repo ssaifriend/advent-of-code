@@ -49,8 +49,7 @@ let unique = visits =>
   visits->Belt.List.toArray->Belt.Set.fromArray(~id=module(CoordComp))->Belt.Set.toArray
 
 list{">", "^>v<", "^v^v^v^v^v"}
-->Belt.List.map(parse)
-->Belt.List.map(directions => directions->visit((0, 0), list{(0, 0)}))
+->Belt.List.map(l => l->parse->visit((0, 0), list{(0, 0)}))
 ->Belt.List.forEach(visits => visits->unique->Belt.Array.size->Js.log)
 
 Node.Fs.readFileAsUtf8Sync("input/2015/2015.3.input")
@@ -73,9 +72,7 @@ let visitsEachSanta = directionsWithRobo =>
   ->Belt.List.fromArray
 
 list{"^v", "^>v<", "^v^v^v^v^v"}
-->Belt.List.map(parse)
-->Belt.List.map(splitRobo)
-->Belt.List.map(visitsEachSanta)
+->Belt.List.map(l => l->parse->splitRobo->visitsEachSanta)
 ->Belt.List.forEach(visits => visits->unique->Belt.Array.size->Js.log)
 
 Node.Fs.readFileAsUtf8Sync("input/2015/2015.3.input")

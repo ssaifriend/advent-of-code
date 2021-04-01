@@ -31,8 +31,7 @@ module Parser = {
     switch result {
     | None => raise(Not_found)
     | Some(r) =>
-      let captures =
-        r->Js.Re.captures->Belt.Array.map(Js.Nullable.toOption)->Belt.Array.keepMap(x => x)
+      let captures = r->Js.Re.captures->Belt.Array.keepMap(Js.Nullable.toOption)
       let opType = switch captures[1] {
       | "turn off" => TURN(false)
       | "turn on" => TURN(true)
@@ -43,12 +42,12 @@ module Parser = {
       {
         type_: opType,
         start: {
-          x: captures[2]->Belt.Int.fromString->Belt.Option.getExn,
-          y: captures[3]->Belt.Int.fromString->Belt.Option.getExn,
+          x: captures[2]->Util.Int.fromStringExn,
+          y: captures[3]->Util.Int.fromStringExn,
         },
         end_: {
-          x: captures[4]->Belt.Int.fromString->Belt.Option.getExn,
-          y: captures[5]->Belt.Int.fromString->Belt.Option.getExn,
+          x: captures[4]->Util.Int.fromStringExn,
+          y: captures[5]->Util.Int.fromStringExn,
         },
       }
     }
@@ -117,21 +116,16 @@ module BooleanRunner = Runner(BooleanExecuter)
 
 let map = Belt.Map.make(~id=module(CoordMap.Comp))
 
-"turn on 0,0 through 999,999"
-->Js.String2.split("\n")
-->Belt.Array.map(Parser.make)
-->Belt.List.fromArray
-->BooleanRunner.doOperations(map)
-->BooleanRunner.turnOnLightsCount
-->Js.log
+let runP1 = s =>
+  s
+  ->Js.String2.split("\n")
+  ->Belt.Array.map(Parser.make)
+  ->Belt.List.fromArray
+  ->BooleanRunner.doOperations(map)
+  ->BooleanRunner.turnOnLightsCount
 
-Node.Fs.readFileAsUtf8Sync("input/2015/2015.6.input")
-->Js.String2.split("\n")
-->Belt.Array.map(Parser.make)
-->Belt.List.fromArray
-->BooleanRunner.doOperations(map)
-->BooleanRunner.turnOnLightsCount
-->Js.log
+"turn on 0,0 through 999,999"->runP1->Js.log
+Node.Fs.readFileAsUtf8Sync("input/2015/2015.6.input")->runP1->Js.log
 
 module CountExecuter = {
   let doOperation = (map, coord: Coord.t, type_: OperationType.t) =>
@@ -150,18 +144,14 @@ module CountExecuter = {
 
 module CountRunner = Runner(CountExecuter)
 
-"turn on 0,0 through 0,0"
-->Js.String2.split("\n")
-->Belt.Array.map(Parser.make)
-->Belt.List.fromArray
-->CountRunner.doOperations(map)
-->CountRunner.turnOnLightsCount
-->Js.log
+let runP2 = s =>
+  s
+  ->Js.String2.split("\n")
+  ->Belt.Array.map(Parser.make)
+  ->Belt.List.fromArray
+  ->CountRunner.doOperations(map)
+  ->CountRunner.turnOnLightsCount
 
-Node.Fs.readFileAsUtf8Sync("input/2015/2015.6.input")
-->Js.String2.split("\n")
-->Belt.Array.map(Parser.make)
-->Belt.List.fromArray
-->CountRunner.doOperations(map)
-->CountRunner.turnOnLightsCount
-->Js.log
+"turn on 0,0 through 0,0"->runP2->Js.log
+
+Node.Fs.readFileAsUtf8Sync("input/2015/2015.6.input")->runP2->Js.log

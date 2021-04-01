@@ -43,7 +43,6 @@ let isNice = str =>
 Node.Fs.readFileAsUtf8Sync("input/2015/2015.5.input")
 ->Js.String2.split("\n")
 ->Belt.Array.keep(isNice)
-
 // ->Belt.Array.map(Js.log)
 ->Belt.Array.size
 ->Js.log
@@ -59,7 +58,7 @@ let hasLeastTwoLetterTwice = str =>
 let rec hasOneLetterRepeat = (str, ~index) =>
   switch (str[index], str->Belt.Array.get(index + 2)) {
   | (_, None) => false
-  | (a, Some(b)) when a == b => true
+  | (a, Some(b)) if a == b => true
   | _ => str->hasOneLetterRepeat(~index=index + 1)
   }
 

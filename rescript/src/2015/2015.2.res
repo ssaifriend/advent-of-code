@@ -6,7 +6,7 @@ module Dimension = {
   }
 
   let make = input => {
-    let inputs = input->Js.String2.split("x")->Belt.Array.keepMap(Belt.Int.fromString)
+    let inputs = input->Js.String2.split("x")->Util.Int.fromStringsExn
 
     {l: inputs[0], w: inputs[1], h: inputs[2]}
   }
@@ -27,19 +27,15 @@ module WrappingPaper = {
 }
 
 // part1 sample
+let runP1 = v =>
+  v->Js.String2.split("\n")->Belt.Array.map(v => v->Dimension.make->WrappingPaper.calculate)
+
 "2x3x4
 1x1x10"
-->Js.String2.split("\n")
-->Belt.Array.map(Dimension.make)
-->Belt.Array.map(WrappingPaper.calculate)
+->runP1
 ->Belt.Array.forEach(Js.log)
 
-Node.Fs.readFileAsUtf8Sync("input/2015/2015.2.input")
-->Js.String2.split("\n")
-->Belt.Array.map(Dimension.make)
-->Belt.Array.map(WrappingPaper.calculate)
-->Belt.Array.reduce(0, \"+")
-->Js.log
+Node.Fs.readFileAsUtf8Sync("input/2015/2015.2.input")->runP1->Util.Array.Int.sum->Js.log
 
 // part2
 module WrappingRibbon = {
@@ -60,16 +56,12 @@ module WrappingRibbon = {
   }
 }
 
+let runP2 = v =>
+  v->Js.String2.split("\n")->Belt.Array.map(v => v->Dimension.make->WrappingRibbon.calculate)
+
 "2x3x4
 1x1x10"
-->Js.String2.split("\n")
-->Belt.Array.map(Dimension.make)
-->Belt.Array.map(WrappingRibbon.calculate)
+->runP2
 ->Belt.Array.forEach(Js.log)
 
-Node.Fs.readFileAsUtf8Sync("input/2015/2015.2.input")
-->Js.String2.split("\n")
-->Belt.Array.map(Dimension.make)
-->Belt.Array.map(WrappingRibbon.calculate)
-->Belt.Array.reduce(0, \"+")
-->Js.log
+Node.Fs.readFileAsUtf8Sync("input/2015/2015.2.input")->runP2->Util.Array.Int.sum->Js.log
