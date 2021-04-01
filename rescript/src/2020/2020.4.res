@@ -1,10 +1,9 @@
 let data = Node.Fs.readFileAsUtf8Sync("input/2020/2020.4.input")
 let raw = data->Js.String2.split("\n\n")
 
-module type PassportValidator = {
+module type Passport = {
   type unvalidate
   type validate
-
   type t<'a> = {
     byr: int,
     iyr: int,
@@ -19,8 +18,8 @@ module type PassportValidator = {
   let validators: array<t<unvalidate> => result<unit, unit>>
 }
 
-module Passport = (Validator: PassportValidator) => {
-  open Validator
+module Validator = (Passport: Passport) => {
+  open Passport
 
   let rec extract = (str, re, os) =>
     switch re->Js.Re.exec_(str) {
@@ -66,7 +65,7 @@ module Passport = (Validator: PassportValidator) => {
   }
 
   let validate = (p: t<unvalidate>): option<t<validate>> => {
-    Validator.validators->Belt.Array.map(f => p->f)->Belt.Array.every(Belt.Result.isOk)
+    validators->Belt.Array.map(f => p->f)->Belt.Array.every(Belt.Result.isOk)
       ? Some({
           byr: p.byr,
           iyr: p.iyr,
@@ -82,7 +81,7 @@ module Passport = (Validator: PassportValidator) => {
 }
 
 // part1
-module PassportValidator1: PassportValidator = {
+module Passport1: Passport = {
   type unvalidate
   type validate
   type t<'a> = {
@@ -110,15 +109,15 @@ module PassportValidator1: PassportValidator = {
   ]
 }
 
-module Passport1 = Passport(PassportValidator1)
+module Validator1 = Validator(Passport1)
 raw
-->Belt.Array.keepMap(Passport1.make)
-->Belt.Array.keepMap(Passport1.validate)
+->Belt.Array.keepMap(Validator1.make)
+->Belt.Array.keepMap(Validator1.validate)
 ->Belt.Array.size
 ->Js.log
 
 // part2
-module PassportValidator2: PassportValidator = {
+module Passport2: Passport = {
   type unvalidate
   type validate
   type t<'a> = {
@@ -182,9 +181,9 @@ module PassportValidator2: PassportValidator = {
   ]
 }
 
-module Passport2 = Passport(PassportValidator2)
+module Validator2 = Validator(Passport2)
 raw
-->Belt.Array.keepMap(Passport2.make)
-->Belt.Array.keepMap(Passport2.validate)
+->Belt.Array.keepMap(Validator2.make)
+->Belt.Array.keepMap(Validator2.validate)
 ->Belt.Array.size
 ->Js.log
