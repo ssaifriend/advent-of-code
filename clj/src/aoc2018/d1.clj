@@ -14,15 +14,13 @@
 (defn ->find-twice-search
   "더할때 반환값이 두번째로 나오는 값을 반환합니다."
   [ds]
-  (loop [sum 0
-         sums #{}
-         ds (cycle ds)]
-    (let [sum (+ sum (first ds))]
-      (if (contains? sums sum)
-        sum
-        (recur sum
-               (conj sums sum)
-               (rest ds))))))
+  (->>
+    (reductions + (cycle ds))
+    (reduce (fn [s v]
+              (if (contains? s v)
+                (reduced v)
+                (conj s v)))
+            #{})))
 
 (comment
   (->>
