@@ -112,5 +112,7 @@ dist
 .merlin
 *.bs.js
 
-# Clojure port file
-.nrepl-port
+# Clojure
+clj/project.clj
+clj/target
+clj/.nrepl-port
