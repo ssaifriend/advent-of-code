@@ -1,11 +1,5 @@
-(ns aoc2018d1
-  (:require [clojure.string :as s]))
-
-(defn parse->process
-  "line 단위로 분리하고 숫자로 변환합니다."
-  [ds]
-  (->> (s/split ds #"\n")
-       (map #(Integer/parseInt %))))
+(ns aoc2018.d1
+  (:require [util]))
 
 (defn ->aggregate-part-1
   "입력받은 값을 모두 더합니다."
@@ -27,13 +21,13 @@
 
 (comment
   (->>
-    (slurp "../input/2018/2018.1.input")
-    (parse->process)
+    (util/read-file "2018/2018.1.input")
+    (util/split-line-to-int)
     (->aggregate-part-1)
     (println))
   (->>
-    (slurp "../input/2018/2018.1.input")
-    (parse->process)
+    (util/input-path "2018/2018.1.input")
+    (util/split-line-to-int)
     (->find-twice-search)
     (println))
 
