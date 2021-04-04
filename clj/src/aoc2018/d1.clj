@@ -1,6 +1,11 @@
 (ns aoc2018.d1
   (:require [util]))
 
+(defn pp []
+  (->>
+    (util/read-file "2018/2018.1.input")
+    (util/split-line-to-int)))
+
 (defn ->aggregate-part-1
   "입력받은 값을 모두 더합니다."
   [ds]
@@ -21,13 +26,11 @@
 
 (comment
   (->>
-    (util/read-file "2018/2018.1.input")
-    (util/split-line-to-int)
+    (pp)
     (->aggregate-part-1)
     (println))
   (->>
-    (util/input-path "2018/2018.1.input")
-    (util/split-line-to-int)
+    (pp)
     (->find-twice-search)
     (println))
 
