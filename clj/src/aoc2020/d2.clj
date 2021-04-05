@@ -32,8 +32,7 @@
        (filter
          #(let [{:keys [first second frequencies char]} %]
             (when-let [f (get frequencies char)]
-              (and (>= f first)
-                   (<= f second)))))
+              (<= first f second))))
        (count)))
 
 
