@@ -19,7 +19,7 @@
        (count)))
 
 (defn ->aggregate-part-1 [hms]
-  (->> '(2 3)
+  (->> [2 3]
        (map #(find-count hms %))
        (apply *)))
 
@@ -33,9 +33,8 @@
     (filter #(apply = %))
     (map first)))
 
-(defn- eq-strs [ss]
-  (let [[s1 & others] ss
-        s1-count (count s1)]
+(defn- eq-strs [[s1 & others]]
+  (let [s1-count (count s1)]
     (->> others
          (map #(eq-str s1 %))
          (filter #(= 1 (- s1-count (count %)))))))
