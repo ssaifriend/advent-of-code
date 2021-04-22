@@ -1,5 +1,7 @@
 (ns aoc2018.d3
   (:require [clojure.string :as s]
+            [clojure.math.combinatorics :as comb]
+            [clojure.set :as set]
             [util]))
 
 (defn split [line]
@@ -18,31 +20,46 @@
     (s/split-lines)
     (map split)))
 
-(defn inc-part-1 [arr cord]
-  (let [{:keys [x y width height]} cord]
-    (doseq [x (->> (range x Integer/MAX_VALUE) (take width))
-            y (->> (range y Integer/MAX_VALUE) (take height))]
-      (aset-int arr x y (inc (aget arr x y)))))
-  arr)
+(defn preprocess [cords]
+  (->> cords
+       (reduce (fn [hm cord]
+                 (let [{:keys [idx x y width height]} cord
+                       x (->> (range x Integer/MAX_VALUE) (take width))
+                       y (->> (range y Integer/MAX_VALUE) (take height))]
+                   (->> (comb/cartesian-product x y)
+                        (reduce (fn [hm [x y]]
+                                  (let [k (keyword (str x "-" y))]
+                                    (update hm k #(if (nil? %)
+                                                    [idx]
+                                                    (conj % idx)))))
+                                hm))))
+               {})))
 
-(defn preprocess-part-1 [cords]
-  (let [sum (fn [cols] (->> cords (map #(apply + ((apply juxt cols) %)))))
-        max-width (->> (sum [:x :width]) (apply max))
-        max-height (->> (sum [:y :height]) (apply max))]
-    (reduce inc-part-1
-            (make-array Integer/TYPE max-width max-height)
-            cords)))
-
-(defn aggregate-part-1 [arrs]
-  (->> arrs
-       (mapcat vec)
+(defn aggregate-part-1 [hm]
+  (->> hm
+       (map (fn [[_ v]] (count v)))
        (filter #(>= % 2))))
+
+(defn aggregate-part-2 [cords hm]
+  (let [overlap-idxs (->> hm
+                          (filter (fn [[_ v]] (>= (count v) 2)))
+                          (vals)
+                          (flatten)
+                          (distinct)
+                          (set))
+        idxs (->> (map :idx cords) (set))]
+    (set/difference idxs overlap-idxs)))
 
 (comment
   (->> (parse)
-       (preprocess-part-1)
+       (preprocess)
        (aggregate-part-1)
        (count))
+  (let [cords (parse)]
+    (->> cords
+         (preprocess)
+         (aggregate-part-2 cords)
+         (println)))
 
   (let [cords (parse)
         sum (fn [cols] (->> cords (map #(apply + ((conj cols juxt) %)))))]
@@ -53,4 +70,8 @@
   (let [a (make-array Integer/TYPE 10 10)]
     (aset-int a 9 0 (inc (aget a 9 0)))
     (println (mapcat vec a))
-    (seq (flatten a))))
+    (seq (flatten a)))
+  (let [sum (fn [cols] (->> cords (map #(apply + ((apply juxt cols) %)))))
+        max-width (->> (sum [:x :width]) (apply max))
+        max-height (->> (sum [:y :height]) (apply max))
+        count (count cords)]))
