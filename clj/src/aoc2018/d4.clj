@@ -56,27 +56,27 @@
                  (->> (generate-minute-range start end)
                       (map (fn [m] [(:id start) (.getMinute m)])))))))
 
-(defn max-second-first [coll]
-  (->> coll
-       (sort-by second >)
-       (first)))
-
 (defn find-first-max-count [coll]
   (->> coll
        (map (fn [[id coll]] [id (count coll)]))
-       (max-second-first)))
+       (apply max-key second)))
 
-(defn find-frequency [coll f]
+(defn find-frequency [coll]
   (->> coll
-       (map f)
+       (map second)
        (frequencies)
-       (max-second-first)))
+       (apply max-key second)))
 
-(defn aggregate [f g coll]
-  (let [coll (->> coll (group-by f))
+(defn aggregate-part-1 [coll]
+  (let [coll (->> coll (group-by first))
         [a _] (find-first-max-count coll)
-        [b _] (find-frequency (coll a) g)]
+        [b _] (find-frequency (coll a) )]
     (* a b)))
+
+(defn aggregate-part-2 [coll]
+  (let [coll (->> coll (group-by identity))
+        [a _] (find-first-max-count coll)]
+    (apply * a)))
 
 (comment
   "엄격" #"\[([0-9]{4})-([0-9]{2})-([0-9]{2})\] ([0-9]{2}):([0-9]{2})"
@@ -87,5 +87,5 @@
 [1518-11-01 00:55] wakes up")
   (def input (util/read-file "2018/2018.4.input"))
   (def preprocessed (->> input (parse) (preprocess)))
-  (->> preprocessed (aggregate first second))
-  (->> preprocessed (aggregate second first)))
+  (->> preprocessed (aggregate-part-1))
+  (->> preprocessed (aggregate-part-2)))
