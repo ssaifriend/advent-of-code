@@ -5,24 +5,36 @@
 (defn parse [f]
   (s/split f #""))
 
+(defn first-char [s]
+  (->> s (str) (char-array) (first)))
+
 (defn is-lower-case? [s]
-  (= s (s/lower-case s)))
+  (<= (int \a) (int (first-char s)) (int \z)))
 
 (defn reverse-case [s]
   (if (is-lower-case? s) (s/upper-case s) (s/lower-case s)))
 
+(defn make-next-char [ss]
+  (let [ss2 (->> ss (drop 1) (reverse) (cons nil) (reverse))]
+    (map list ss ss2)))
+
+(defn char= [s1 s2]
+  (if s2
+    (= (int (first-char s1)) (int (first-char s2)))
+    false))
+
 (defn reaction [ss]
   (->> ss
-       (count)
-       (range)
-       (reduce (fn [v i]
-                 (let [s (nth ss i)
-                       n (nth ss (inc i) nil)
-                       rs (reverse-case s)]
-                   (if (= rs n)
-                     (reduced (apply conj v (drop (+ i 2) ss)))
-                     (conj v s))))
-               [])))
+       (make-next-char)
+       (reduce (fn [l [s n]]
+                 (if (char= (reverse-case s) n)
+                   (->> ss
+                        (drop (+ (count l) 2))
+                        (apply conj l)
+                        (reduced))
+                   (conj l s)))
+               ())
+       (reverse)))
 
 (defn get-reaction-seq [s]
   (lazy-seq (cons s (get-reaction-seq (reaction s)))))
@@ -51,7 +63,7 @@
 (comment
   (def input "dabAcCaCBAcCcaDA")
   (def input (util/read-file "2018/2018.5.input"))
-  (->> input (parse) (p1-seq) (take 10) (map s/join))
+  (->> input (parse) (get-reaction-seq) (take 5) (map s/join))
   (->> input (parse) (get-reaction-seq) (get-finished-reaction) (count))
   (->> input (parse) (find-p2) (apply min))
 
