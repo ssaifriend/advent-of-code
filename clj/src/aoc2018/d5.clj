@@ -6,21 +6,23 @@
   (s/split f #""))
 
 (defn first-char [s]
-  (->> s (str) (char-array) (first)))
+  (->> s (str) (first)))
 
 (defn is-lower-case? [s]
-  (<= (int \a) (int (first-char s)) (int \z)))
+  (->> [\a (first-char s) \z]
+       (map int)
+       (apply <=)))
 
 (defn reverse-case [s]
   (if (is-lower-case? s) (s/upper-case s) (s/lower-case s)))
 
 (defn make-next-char [ss]
-  (let [ss2 (->> ss (drop 1) (reverse) (cons nil) (reverse))]
+  (let [ss2 (conj (->> ss (drop 1) (vec)) nil)]
     (map list ss ss2)))
 
 (defn char= [s1 s2]
   (if s2
-    (= (int (first-char s1)) (int (first-char s2)))
+    (->> [s1 s2] (map #((comp int first-char) %)) (apply =))
     false))
 
 (defn reaction [ss]
