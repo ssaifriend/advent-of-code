@@ -8,29 +8,26 @@
           "wakes up"])
 
 (def parse-pattern
-  (->> (str "(" (s/join "|" ops) ")")
-       (re-pattern)))
+  (re-pattern (str "(" (s/join "|" ops) ")")))
 
 (defn parse [f]
-  (->> f
-       (s/split-lines)
+  (->> (s/split-lines f)
        (map (fn [line]
               (let [re (re-matches #"\[([0-9-]{10}) ([0-9:]{5})\] (.*)" line)
                     [_ date time op] re
+                    [_ a b] (re-matches parse-pattern op)
+
+                    op (first (s/split a #" "))
                     t (j/local-date-time "yyyy-MM-dd HH:mm" (str date " " time))]
-                (when (not (nil? re))
-                  (let [re (re-matches parse-pattern op)
-                        [_ a b] re
-                        [op] (s/split a #" ")]
-                    (cond
-                      (= op "Guard")
-                      {:op :shift :t t :id (Integer/parseInt b)}
+                (case op
+                  "Guard"
+                  {:op :shift :t t :id (Integer/parseInt b)}
 
-                      (= op "falls")
-                      {:op :sleep :t t}
+                  "falls"
+                  {:op :sleep :t t}
 
-                      (= op "wakes")
-                      {:op :wake :t t}))))))))
+                  "wakes"
+                  {:op :wake :t t}))))))
 
 (defn attach-id [coll]
   (->> coll
@@ -39,7 +36,7 @@
                               (assoc hm :id (:id head))
                               hm)))
                ())
-       (reverse)))
+       reverse))
 
 (defn generate-minute-range [start end]
   (->> (:t start)
@@ -49,7 +46,7 @@
 (defn preprocess [coll]
   (->> coll
        (sort-by :t)
-       (attach-id)
+       attach-id
        (filter #(not= :shift (:op %)))
        (partition 2)
        (mapcat (fn [[start end]]
@@ -64,7 +61,7 @@
 (defn find-frequency [coll]
   (->> coll
        (map second)
-       (frequencies)
+       frequencies
        (apply max-key second)))
 
 (defn aggregate-part-1 [coll]

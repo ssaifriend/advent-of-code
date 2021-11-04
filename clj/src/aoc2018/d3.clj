@@ -2,7 +2,7 @@
   (:require [clojure.string :as s]
             [clojure.math.combinatorics :as comb]
             [clojure.set :as set]
-            [util]))
+            [util :refer [read-file]]))
 
 (defn split [line]
   (let [re (re-matches #"#([0-9]+) @ ([0-9]+),([0-9]+): ([0-9]+)x([0-9]+)" line)
@@ -15,25 +15,19 @@
        :height (Integer/parseInt height)})))
 
 (defn parse []
-  (->>
-    (util/read-file "2018/2018.3.input")
-    (s/split-lines)
-    (map split)))
+  (map split (-> "2018/2018.3.input" read-file s/split-lines)))
 
 (defn preprocess [cords]
-  (->> cords
-       (reduce (fn [hm cord]
-                 (let [{:keys [idx x y width height]} cord
-                       x (->> (range x Integer/MAX_VALUE) (take width))
-                       y (->> (range y Integer/MAX_VALUE) (take height))]
-                   (->> (comb/cartesian-product x y)
-                        (reduce (fn [hm [x y]]
-                                  (let [k (keyword (str x "-" y))]
-                                    (update hm k #(if (nil? %)
-                                                    [idx]
-                                                    (conj % idx)))))
-                                hm))))
-               {})))
+  (reduce (fn [hm {:keys [idx x y width height]}]
+            (let [x (->> (range x Integer/MAX_VALUE) (take width))
+                  y (->> (range y Integer/MAX_VALUE) (take height))]
+              (->> (comb/cartesian-product x y)
+                   (reduce (fn [hm [x y]]
+                             (let [k (str x "-" y)]
+                               (update hm k #(if % (conj % idx) [idx]))))
+                           hm))))
+          {}
+          cords))
 
 (defn aggregate-part-1 [hm]
   (->> hm
@@ -43,23 +37,17 @@
 (defn aggregate-part-2 [cords hm]
   (let [overlap-idxs (->> hm
                           (filter (fn [[_ v]] (>= (count v) 2)))
-                          (vals)
-                          (flatten)
-                          (distinct)
-                          (set))
-        idxs (->> (map :idx cords) (set))]
+                          vals
+                          flatten
+                          distinct
+                          set)
+        idxs (->> cords (map :idx) set)]
     (set/difference idxs overlap-idxs)))
 
 (comment
-  (->> (parse)
-       (preprocess)
-       (aggregate-part-1)
-       (count))
+  (-> (parse) preprocess aggregate-part-1 count)
   (let [cords (parse)]
-    (->> cords
-         (preprocess)
-         (aggregate-part-2 cords)
-         (println)))
+    (->> cords preprocess (aggregate-part-2 cords) println))
 
   (let [cords (parse)
         sum (fn [cols] (->> cords (map #(apply + ((conj cols juxt) %)))))]

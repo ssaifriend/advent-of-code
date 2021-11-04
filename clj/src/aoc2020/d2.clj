@@ -1,6 +1,6 @@
 (ns aoc2020.d2
   (:require [clojure.string :as s]
-            [util]))
+            [util :refer [read-file]]))
 
 (defn extract [s]
   (let [rem (re-find #"([0-9]+)-([0-9]+) ([a-z]+): ([a-z]+)" s)
@@ -13,55 +13,39 @@
        :password password})))
 
 (defn parse []
-  (->>
-    (util/read-file "2020/2020.2.input")
-    (s/trim)
-    (s/split-lines)
-    (map #(extract %))))
+  (map extract
+       (-> "2020/2020.2.input" read-file s/trim s/split-lines)))
 
 (defn ->preprocess-part-1 [hms]
-  (->> hms
-       (map
-         #(assoc %
-            :frequencies
-            (->> (s/split (:password %) #"")
-                 (frequencies))))))
+  (map #(assoc % :frequencies
+                 (frequencies (s/split (:password %) #"")))
+       hms))
 
 (defn ->aggregate-part-1 [hms]
   (->> hms
-       (filter
-         #(let [{:keys [first second frequencies char]} %]
-            (when-let [f (get frequencies char)]
-              (<= first f second))))
-       (count)))
+       (filter (fn [{:keys [first second frequencies char]}]
+                 (when-let [f (get frequencies char)]
+                   (<= first f second))))
+       count))
 
 
-(defn- part-2-valid-password? [hm]
-  (let [{:keys [first second password char]} hm
-        password (s/split password #"")]
+(defn- part-2-valid-password? [{:keys [first second password char]}]
+  (let [password (s/split password #"")]
     (->> [first second]
          (map dec)
          (map #(nth password %))
          (filter #(= char %))
-         (count)
+         count
          (= 1))))
 
 (defn ->preprocess->aggregate-part-2 [hms]
-  (->> hms
-       (filter part-2-valid-password?)
-       (count)))
+  (count (filter part-2-valid-password? hms)))
 
 
 (comment
-  (->>
-    (parse)
-    (->preprocess-part-1)
-    (->aggregate-part-1)
-    (println))
-  (->>
-    (parse)
-    (->preprocess->aggregate-part-2)
-    (println))
+  (-> (parse) ->preprocess-part-1 ->aggregate-part-1 println)
+  (-> (parse) ->preprocess->aggregate-part-2 println)
+
   (println (-> (apply list [13 16]) (conj 'juxt)))
   (println (-> (apply list) (conj [13 16] 'juxt)))
   (let [r (range 20)

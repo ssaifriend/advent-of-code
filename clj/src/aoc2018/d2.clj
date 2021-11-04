@@ -1,22 +1,20 @@
 (ns aoc2018.d2
   (:require [clojure.string :as s]
-            [util]))
+            [util :refer [read-file]]))
 
 (defn parse []
-  (->>
-    (util/read-file "2018/2018.2.input")
-    (s/split-lines)))
+  (-> "2018/2018.2.input" read-file s/split-lines))
 
 (defn ->process-part-1 [ss]
   (->> ss
        (map #(s/split % #""))
-       (map #(frequencies %))))
+       (map frequencies)))
 
 (defn- find-count [hms c]
   (->> hms
-       (map #(vals %))
+       (map vals)
        (filter (fn [vs] (some #(= % c) vs)))
-       (count)))
+       count))
 
 (defn ->aggregate-part-1 [hms]
   (->> [2 3]
@@ -28,10 +26,9 @@
   (->> ss (map #(s/split % #""))))
 
 (defn- eq-str [s1 s2]
-  (->>
-    (map vector s1 s2)
-    (filter #(apply = %))
-    (map first)))
+  (->> (map vector s1 s2)
+       (filter #(apply = %))
+       (map first)))
 
 (defn- eq-strs [[s1 & others]]
   (let [s1-count (count s1)]
@@ -45,19 +42,11 @@
     (recur (rest ss))))
 
 (defn ->print-part-2 [ss]
-  (->> ss (s/join "") (println)))
+  (->> ss (s/join "") println))
 
 (comment
-  (->>
-    (parse)
-    (->process-part-1)
-    (->aggregate-part-1)
-    (println))
-  (->>
-    (parse)
-    (->process-part-2)
-    (->aggregate-part-2)
-    (->print-part-2))
+  (-> (parse) ->process-part-1 ->aggregate-part-1 println)
+  (-> (parse) ->process-part-2 ->aggregate-part-2 ->print-part-2)
 
   (some #(= (val %) 1) {:a 1 :b 2})
   (eq-str ["a" "b" "d"] ["a" "c" "d"])
