@@ -6,68 +6,51 @@
   (s/split f #""))
 
 (defn first-char [s]
-  (->> s (str) (first)))
+  (-> s (str) (first)))
 
-(defn is-lower-case? [s]
+(defn lower-case? [s]
   (->> [\a (first-char s) \z]
        (map int)
        (apply <=)))
 
 (defn reverse-case [s]
-  (if (is-lower-case? s) (s/upper-case s) (s/lower-case s)))
+  (if (lower-case? s)
+    (s/upper-case s)
+    (s/lower-case s)))
 
-(defn make-next-char [ss]
-  (let [ss2 (conj (->> ss (drop 1) (vec)) nil)]
-    (map list ss ss2)))
-
-(defn char= [s1 s2]
-  (if s2
-    (->> [s1 s2] (map #((comp int first-char) %)) (apply =))
-    false))
+(defn reaction? [s1 s2]
+  (if (lower-case? s1)
+    (= (reverse-case s1) s2)
+    (= s1 (reverse-case s2))))
 
 (defn reaction [ss]
-  (->> ss
-       (make-next-char)
-       (reduce (fn [l [s n]]
-                 (if (char= (reverse-case s) n)
-                   (->> ss
-                        (drop (+ (count l) 2))
-                        (apply conj l)
-                        (reduced))
-                   (conj l s)))
-               ())
-       (reverse)))
+  (reduce (fn [stack s]
+            (if-let [top (peek stack)]
+              (if (reaction? top s)
+                (pop stack)
+                (conj stack s))
+              (conj stack s)))
+          []
+          ss))
 
-(defn get-reaction-seq [s]
-  (lazy-seq (cons s (get-reaction-seq (reaction s)))))
+(defn match-str? [input s]
+  (or (= input s)
+      (= input (s/upper-case s))))
 
-(defn get-finished-reaction [s]
-  (loop [c nil
-         s s]
-    (let [n (first s)]
-      (if (= c n)
-        (s/join c)
-        (recur n
-               (rest s))))))
-
-(defn find-p2 [s]
-  (let [s (s/join "" s)]
-    (->> (range (int \a) (inc (int \z)))
-         (map #((comp str char) %))
-         (map #(-> s (s/replace % "") (s/replace (s/upper-case %) "")))
-         (distinct)
-         (map #(->> (parse %)
-                    (get-reaction-seq)
-                    (get-finished-reaction)
-                    (count))))))
+(defn find-p2 [ss]
+  (->> (range (int \a) (inc (int \z)))
+       (map #((comp str char) %))
+       (map (fn [s] (remove #(match-str? % s) ss)))
+       distinct
+       (map #(->> % reaction count))))
 
 
 (comment
   (def input "dabAcCaCBAcCcaDA")
   (def input (util/read-file "2018/2018.5.input"))
-  (->> input (parse) (get-reaction-seq) (take 5) (map s/join))
-  (->> input (parse) (get-reaction-seq) (get-finished-reaction) (count))
-  (->> input (parse) (find-p2) (apply min))
+  (->> input parse reaction s/join)
+  (->> input parse reaction count)
+  (->> input parse find-p2 (apply min))
 
   (defn generate-around [s]
     ;(->> (->> s (count) (range) (map dec))
