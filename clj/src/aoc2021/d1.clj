@@ -18,7 +18,6 @@
 
 (defn three-measurements [inputs]
   (-> (reduce (fn [m x]
-                (println m)
                 (let [m (-> (if (= (count (:queue m)) 3)
                               (update m :queue #(rest %))
                               m)
