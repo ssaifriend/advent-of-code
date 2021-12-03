@@ -14,7 +14,7 @@
 (defn each-bit-map [inputs]
   ; https://stackoverflow.com/questions/8314789/rotate-a-list-of-list-matrix-in-clojure
   (let [transposed (apply map list inputs)]
-    (map #(frequencies %) transposed)))
+    (map frequencies transposed)))
 
 (defn gamma-rate [bit-map]
   (->> bit-map
