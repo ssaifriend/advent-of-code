@@ -16,8 +16,8 @@
   (reduce (fn [m {:keys [action x]}]
             (case action
               :forward (update m :position #(+ % x))
-              :up (update m :depth #(+ % x))
-              :down (update m :depth #(- % x))))
+              :up (update m :depth #(- % x))
+              :down (update m :depth #(+ % x))))
           {:depth 0
            :position 0}
           inputs))
