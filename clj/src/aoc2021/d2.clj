@@ -22,6 +22,23 @@
            :position 0}
           inputs))
 
+(defn move2 [inputs]
+  (reduce (fn [m {:keys [action x]}]
+            (case action
+              :forward (-> m
+                           (update :position #(+ % x))
+                           (update :depth #(+ % (* (:aim m) x))))
+              :up (update m :aim #(- % x))
+              :down (update m :aim #(+ % x))))
+          {:depth 0
+           :aim 0
+           :position 0}
+          inputs))
+
 (comment
   (let [result (-> (get-read-file) parse move)]
-    (* (:depth result) (:position result))))
+    (* (:depth result) (:position result)))
+  (-> "forward 5\ndown 5\nforward 8\nup 3\ndown 8\nforward 2" s/split-lines parse move2)
+  (let [result (-> (get-read-file) parse move2)]
+    (* (:depth result) (:position result)))
+  )
