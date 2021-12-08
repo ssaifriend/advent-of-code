@@ -20,10 +20,12 @@ type Passport = {
 
 let optionGetExn: <T>(o: Option<T>) => T
     = o => pipe(o, O.getOrElse(() => { throw new TypeError() }))
-let mapGetExn: <K, V>(m: Map<K, V>, k: K) => V
-    = (m, k) => pipe(m.get(k), O.fromNullable, optionGetExn)
-let mapIntGetExn: <K>(m: Map<K, string>, k: K) => number
-    = (m, k) => pipe(mapGetExn(m, k), Number.parseInt)
+let mapGet: <K, V>(m:Map<K, V>, k:K) => Option<V>
+    = (m, k) => pipe(m.get(k), O.fromNullable)
+let mapGetExn: <K, V>(k: K) => (m: Map<K, V>) => V
+    = k => m => pipe(mapGet(m, k), optionGetExn)
+let mapIntGetExn: <K>(k: K) => (m: Map<K, string>) => number
+    = k => m => pipe(m, mapGetExn(k), Number.parseInt)
 
 class Parser {
     static read = (s: string) => pipe(s, String.split("\n\n"))
@@ -54,14 +56,14 @@ class Validator {
 class PassportParser1 implements PassportParser {
     parser = (m: Map<string, string>): Passport => {
         return {
-            byr: mapIntGetExn(m, "byr"),
-            iyr: mapIntGetExn(m, "iyr"),
-            eyr: mapIntGetExn(m, "eyr"),
-            hgt: mapGetExn(m, "hgt"),
-            hcl: mapGetExn(m, "hcl"),
-            ecl: mapGetExn(m, "ecl"),
-            pid: mapGetExn(m, "pid"),
-            cid: pipe(m.get("cid"), O.fromNullable, O.map(Number.parseInt), O.getOrElse(() => null)),
+            byr: pipe(m, mapIntGetExn("byr")),
+            iyr: pipe(m, mapIntGetExn("iyr")),
+            eyr: pipe(m, mapIntGetExn("eyr")),
+            hgt: pipe(m, mapGetExn("hgt")),
+            hcl: pipe(m, mapGetExn("hcl")),
+            ecl: pipe(m, mapGetExn("ecl")),
+            pid: pipe(m, mapGetExn("pid")),
+            cid: pipe(mapGet(m, "cid"), O.map(Number.parseInt), O.getOrElse(() => null)),
         }
     }
 }
