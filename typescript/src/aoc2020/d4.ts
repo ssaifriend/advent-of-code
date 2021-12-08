@@ -61,13 +61,13 @@ class PassportParser1 implements PassportParser {
             hcl: mapGetExn(m, "hcl"),
             ecl: mapGetExn(m, "ecl"),
             pid: mapGetExn(m, "pid"),
-            cid: pipe(m.get("cid"), O.fromNullable, O.getOrElse(() => null)),
+            cid: pipe(m.get("cid"), O.fromNullable, O.map(Number.parseInt), O.getOrElse(() => null)),
         }
     }
 }
 
-// let data = fs.readFileSync("../../input/2020/2020.4.sample", { encoding: "utf-8" });
-let data = fs.readFileSync("../../input/2020/2020.4.input", { encoding: "utf-8" });
+// let data = fs.readFileSync("../input/2020/2020.4.sample", { encoding: "utf-8" });
+let data = fs.readFileSync("../input/2020/2020.4.input", { encoding: "utf-8" });
 
 console.log(
     pipe(
