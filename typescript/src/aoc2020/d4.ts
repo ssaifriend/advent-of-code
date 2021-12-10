@@ -7,7 +7,7 @@ import * as ReadOnlyArray from 'fp-ts/ReadonlyArray'
 import * as A from 'fp-ts/Array'
 import { identity } from 'fp-ts/function'
 
-type Passport<T> = {
+type Passport_T = {
     byr: number,
     iyr: number,
     eyr: number,
@@ -17,9 +17,25 @@ type Passport<T> = {
     pid: string,
     cid: Option<number>,
 }
-// TODO why?..
-type unvalidate = never & { readonly _brand: "unvalidate" }
-type validate = never & { readonly _brand: "validate" }
+type UnvalidatePassport = Passport_T & { readonly _brand: "unvalidate" }
+type ValidatePassport = Passport_T & { readonly _brand: "validate" }
+// type Passport = UnvalidatePassport | ValidatePassport
+
+interface Ok<A> {
+    readonly _tag: 'Ok'
+    readonly value: A
+}
+const Ok: <A>(a?: A) => Ok<A> = (a) => ({_tag: 'Ok', value: a})
+interface Error<A> {
+    readonly _tag: 'Error'
+    readonly value: A
+}
+const Error: <A>(a?: A) => Error<A> = (a) => ({_tag: 'Error', value: a})
+type Result<A, B> = Ok<A> | Error<B>
+
+let isOk: <T, U>(r: Result<T, U>) => boolean
+    = r => r._tag === 'Ok'
+
 
 let keepMap: <T, U>(f: (a: T) => Option<U>) => (arr: Array<T>) => Array<U>
     = f => arr => pipe(arr.map(f), A.filter(O.isSome), A.map(optionGetExn))
@@ -35,11 +51,12 @@ let mapIntGetExn: <K>(k: K) => (m: Map<K, string>) => number
 let read = (s: string) => pipe(s, String.split("\n\n"))
 
 interface Validator {
-    (p: Passport<unvalidate>): boolean;
+    (p: UnvalidatePassport): Result<never, never>;
 }
 
 interface PassportParser {
-    parser: (m: Map<string, string>) => Passport<unvalidate>;
+    parser: (m: Map<string, string>) => UnvalidatePassport;
+    toValidate: (p: UnvalidatePassport) => ValidatePassport;
     validators: () => Validator[];
 }
 
@@ -52,7 +69,7 @@ class Validator {
         return new Map<string, string>(variables)
     }
 
-    static toPassport = (m: Map<string, string>, parser: PassportParser): Option<Passport<unvalidate>> => {
+    static toPassport = (m: Map<string, string>, parser: PassportParser): Option<UnvalidatePassport> => {
         try {
             return some(parser.parser(m))
         } catch {
@@ -60,13 +77,13 @@ class Validator {
         }
     }
 
-    static toValidate = (p: Passport<unvalidate>, parser: PassportParser): Option<Passport<validate>> => {
+    static toValidate = (p: UnvalidatePassport, parser: PassportParser): Option<ValidatePassport> => {
         if (pipe(
             parser.validators(),
             A.map(v => v(p)),
-            A.every(identity),
+            A.every(isOk),
         )) {
-            return some(p)
+            return some(parser.toValidate(p))
         } else {
             return none
         }
@@ -75,7 +92,7 @@ class Validator {
 
 class PassportParser1 implements PassportParser {
     // TODO why?...
-    parser = (m: Map<string, string>): Passport<validate> => {
+    parser = (m: Map<string, string>): UnvalidatePassport => {
         return {
             byr: pipe(m, mapIntGetExn("byr")),
             iyr: pipe(m, mapIntGetExn("iyr")),
@@ -85,11 +102,29 @@ class PassportParser1 implements PassportParser {
             ecl: pipe(m, mapGetExn("ecl")),
             pid: pipe(m, mapGetExn("pid")),
             cid: pipe(mapGet(m, "cid"), O.map(Number.parseInt), O.getOrElse(() => null)),
-        }
+        } as UnvalidatePassport
+    }
+    toValidate = (p: UnvalidatePassport): ValidatePassport => {
+        return {
+            byr: p.byr,
+            iyr: p.iyr,
+            eyr: p.eyr,
+            hgt: p.hgt,
+            hcl: p.hcl,
+            ecl: p.ecl,
+            pid: p.pid,
+            cid: p.cid,
+        } as ValidatePassport
     }
     validators = (): Validator[] => {
         return [
-            (p: Passport<unvalidate>) => p.hgt.length > 0,
+            p => p.byr > 0 ? Ok() : Error(),
+            p => p.iyr > 0 ? Ok() : Error(),
+            p => p.eyr > 0 ? Ok() : Error(),
+            p => p.hgt.length > 0 ? Ok() : Error(),
+            p => p.hcl.length > 0 ? Ok() : Error(),
+            p => p.ecl.length > 0 ? Ok() : Error(),
+            p => p.pid.length > 0 ? Ok() : Error(),
         ]
     };
 }
