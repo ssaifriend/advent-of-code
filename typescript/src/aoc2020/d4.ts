@@ -170,13 +170,13 @@ class PassportParser2 implements PassportParser {
         let heightLength = p.hgt.length
         let heightUnit = height.substring(heightLength - 2, heightLength)
         let convertInt = (v: string) => optionGetExn(toInt(v))
-        let between = (v:number, min:number, max:number) => v >= min && v <= max
+        let between = (min:number, max:number) => (v: number) => v >= min && v <= max
   
         switch (heightUnit) {
             case "cm":
-                return between(convertInt(height), 150, 193)
+                return pipe(height, convertInt, between(150, 193))
             case "in":
-                return between(convertInt(height), 59, 76)
+                return pipe(height, convertInt, between(59, 76))
             default:
                 return false
         }
