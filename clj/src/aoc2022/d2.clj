@@ -6,35 +6,23 @@
 (defn get-read-file []
   (-> "2022/2022.2.input" read-file s/split-lines))
 
-(defn ->text-to-rps [s]
-  (case s
-    "A" :rock
-    "B" :paper
-    "C" :scissors
-    "X" :rock
-    "Y" :paper
-    "Z" :scissors))
+(def p1-rps
+  {"A" :rock "B" :paper "C" :scissors
+   "X" :rock "Y" :paper "Z" :scissors})
+
+(def p2-rps
+  {"A" :rock "B" :paper "C" :scissors
+   "X" :lose "Y" :draw "Z" :win})
+
+(defn- parse-line [f]
+  #(->> (s/split % #" ")
+        (map f)))
 
 (defn parse-p1 [ss]
-  (map (fn [s]
-         (->> (s/split s #" ")
-              (map ->text-to-rps)))
-       ss))
-
-(defn ->text-to-rps-and-result [s]
-  (case s
-    "A" :rock
-    "B" :paper
-    "C" :scissors
-    "X" :lose
-    "Y" :draw
-    "Z" :win))
+  (map (parse-line p1-rps) ss))
 
 (defn parse-p2 [ss]
-  (map (fn [s]
-         (->> (s/split s #" ")
-              (map ->text-to-rps-and-result)))
-       ss))
+  (map (parse-line p2-rps) ss))
 
 (def point-map
   {:rock {:rock :draw :paper :win :scissors :lose}
@@ -80,4 +68,5 @@ C Z")
   (-> parse-sample
       parse-p2
       p2)
+  (-> (get-read-file) parse-p2 p2)
   :rcf)
