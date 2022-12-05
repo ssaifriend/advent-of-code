@@ -1,4 +1,4 @@
-{:paths
-       ["src"]
+{:paths ["src"]
  :deps {org.clojure/math.combinatorics {:mvn/version "0.1.6"}
-        clojure.java-time              {:mvn/version "0.3.2"}}}
+        clojure.java-time              {:mvn/version "0.3.2"}
+        medley/medley                  {:mvn/version "1.4.0"}}}
