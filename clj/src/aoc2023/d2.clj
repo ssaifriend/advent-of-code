@@ -32,6 +32,22 @@
        (map :game-id)
        (apply +)))
 
+(defn min-cubes [game]
+  (->> (:games game)
+       (reduce (fn [acc each-game]
+                 (reduce (fn [acc {:keys [cnt cube-type]}]
+                           (update acc cube-type #(max % cnt)))
+                         acc
+                         each-game))
+               {:red 0 :green 0 :blue 0})))
+
+(defn q2 [ss]
+  (->> ss
+       (map parse-game)
+       (map min-cubes)
+       (map #(->> % vals (apply *)))
+       (apply +)))
+
 (comment
   (def sample "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
 Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
@@ -42,5 +58,7 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green")
   (def has-cubes {:red 12 :green 13 :blue 14})
   (q1 (s/split-lines sample) has-cubes)
   (q1 (read-file->) has-cubes)
+
+  (q2 (s/split-lines sample))
 
   :rcf)
